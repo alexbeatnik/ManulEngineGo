@@ -306,7 +306,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Documented CLI version:** `0.0.1.1+`
+**Documented CLI version:** `0.0.1.2+`
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

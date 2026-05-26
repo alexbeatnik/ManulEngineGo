@@ -56,7 +56,7 @@ func main() {
 	firstArg := os.Args[1]
 
 	if firstArg == "--version" || firstArg == "-version" || firstArg == "-v" {
-		fmt.Printf("manul-heart v0.0.9.30 (core 0.0.1.1)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.2)\n")
 		os.Stdout.Sync()
 		return
 	}
@@ -178,7 +178,7 @@ func cmdRun(args []string) error {
 	}
 
 	if *showVersion {
-		fmt.Printf("manul-heart v0.0.9.30 (core 0.0.1.1)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.2)\n")
 		os.Stdout.Sync()
 		return nil
 	}

@@ -137,6 +137,15 @@ ManulHeart matches Python ManulEngine's loop and page-naming semantics:
 
 Page labels are resolved through `pkg/pages` (`pages/<safe-netloc>.json` next to the hunt files): `document.title` → longest-prefix site match → exact/regex/substring → `"Domain"` fallback → URL-derived fallback. Unknown URLs are auto-populated as `Auto: domain/path` placeholders. Both lean and wrapped JSON forms are accepted; registry is reloaded per lookup so edits are picked up live.
 
+## Full-Page Scanner (`0.0.1.2`+)
+
+`pkg/scan` exposes two scan modes via `manul scan <URL>`:
+
+- **Basic** (`ScanPage`): flat list of interactive elements → draft `.hunt` in document order. Mirrors ManulEngine's `SCAN_JS`.
+- **Full** (`ScanPageFull`, flag `--full`): traverses the DOM with Shadow DOM recursion, groups elements by semantic landmark (`<form>`, `<nav>`, `<main>`, `<dialog>`, ARIA roles). Shadow DOM roots appear as `GroupName [shadow]`. Mirrors ManulEngine's `FULL_SCAN_JS`.
+
+`BuildHuntFull` emits `# ── GroupName ──` comment headers; `Page` group is always first, rest are sorted alphabetically. ARIA roles (`textbox`, `combobox`, `switch`) are mapped to the correct DSL verbs (`Fill`, `Select`, `Check`).
+
 ## Visual Parity for Element Highlighting (`0.0.1.0`+)
 
 ManulHeart now matches Python ManulEngine's visual feedback exactly:
