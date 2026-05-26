@@ -74,6 +74,12 @@ type Runtime struct {
 	lastExplainData  []scorer.RankedCandidate // cached ranking for the "explain" debug command
 	pendingDebugPause bool                    // set in runCommands when an action step should pause after resolution
 	pendingDebugIdx  int                      // command index for the pending debug pause
+
+	// onStep, when non-nil, is invoked synchronously after each step
+	// completes (pass or fail) with that step's ExecutionResult. Set via
+	// SetOnStep. Intended for streaming consumers (e.g. the CLI's -jsonl
+	// mode) that need per-step progress before the full HuntResult.
+	onStep func(explain.ExecutionResult)
 }
 
 type mockRule struct {
@@ -108,6 +114,18 @@ func New(cfg config.Config, page browser.Page, logger *utils.Logger) *Runtime {
 // precedence (Row > Step > Mission > Global > Import).
 func (rt *Runtime) ResolveVariable(name string) (string, bool) {
 	return rt.vars.Resolve(name)
+}
+
+// SetOnStep registers a callback that fires after every step (pass or
+// fail) with that step's ExecutionResult. The callback runs on the
+// runtime's own goroutine and MUST NOT block — long-running consumers
+// should hand the value off to a buffered channel. Pass nil to clear.
+//
+// Single-goroutine contract: the callback inherits the Runtime's
+// concurrency guarantees, so no locking is required when it reads the
+// passed ExecutionResult.
+func (rt *Runtime) SetOnStep(fn func(explain.ExecutionResult)) {
+	rt.onStep = fn
 }
 
 // RunHunt executes all commands in hunt against the bound page.
@@ -261,6 +279,9 @@ func (rt *Runtime) runCommands(ctx context.Context, commands []dsl.Command, hunt
 		if huntRes != nil {
 			huntRes.Results = append(huntRes.Results, stepResult)
 		}
+		if rt.onStep != nil {
+			rt.onStep(stepResult)
+		}
 		if err != nil {
 			failed++
 			rt.logger.ActionFail(err)
@@ -377,6 +398,27 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 
 	case dsl.CmdWait:
 		err = rt.page.Wait(ctx, time.Duration(cmd.WaitSeconds*float64(time.Second)))
+
+	case dsl.CmdPress:
+		// PRESS <key> dispatches a keyboard event to whatever element
+		// currently has focus. Typical use: FILL '<field>' '<text>'
+		// followed by PRESS Enter to submit a form. The "PRESS Key ON
+		// '<target>'" form is parsed but not yet supported — callers
+		// should CLICK '<target>' first, then PRESS Key.
+		key := strings.TrimSpace(cmd.PressKey)
+		if key == "" {
+			err = fmt.Errorf("PRESS: missing key name")
+			break
+		}
+		res.ActionValue = key
+		if strings.TrimSpace(cmd.PressTarget) != "" {
+			rt.logger.Warn("PRESS ON '<target>' is not yet implemented — dispatching to focused element instead")
+		}
+		if dispatchErr := rt.page.DispatchKey(ctx, key, 0); dispatchErr != nil {
+			err = fmt.Errorf("PRESS %s: %w", key, dispatchErr)
+			break
+		}
+		rt.invalidateSnapshot()
 
 	case dsl.CmdPrint:
 		text := rt.resolveVariables(cmd.PrintText)

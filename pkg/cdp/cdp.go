@@ -352,6 +352,13 @@ func (c *Conn) SetInputValue(ctx context.Context, id int, xpath, value string) e
 			}
 			el.dispatchEvent(new Event('input', { bubbles: true }));
 			el.dispatchEvent(new Event('change', { bubbles: true }));
+			// Focus the element so a subsequent PRESS Enter / Tab / etc.
+			// reaches it as document.activeElement. Without this, SPA
+			// sites like YouTube swallow the key on document.body and
+			// the form is never submitted.
+			if (typeof el.focus === 'function') {
+				try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); }
+			}
 		}
 	`, id, xpath, value)
 	_, err := Evaluate(ctx, c, js)
@@ -738,7 +745,11 @@ func (c *Conn) GetElementCenter(ctx context.Context, id int, xpath string) (x, y
 }
 
 // DispatchKeyEvent sends a keyboard event to the currently focused element.
+// eventType is one of "keyDown" / "keyUp" / "rawKeyDown" / "char" — it
+// overrides params.Type so callers don't have to set it on both ends of
+// a key-press pair.
 func DispatchKeyEvent(ctx context.Context, c *Conn, eventType string, params KeyEventParams) error {
+	params.Type = eventType
 	_, err := c.Call(ctx, "Input.dispatchKeyEvent", params)
 	return err
 }

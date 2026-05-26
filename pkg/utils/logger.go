@@ -44,7 +44,19 @@ type Logger struct {
 // NewLogger creates a Logger that always writes to os.Stdout.
 // If logFile is non-nil, output is also written to it with ANSI codes stripped.
 func NewLogger(logFile io.Writer) *Logger {
-	l := &Logger{out: os.Stdout, mu: &sync.Mutex{}}
+	return NewLoggerTo(os.Stdout, logFile)
+}
+
+// NewLoggerTo creates a Logger whose primary writer is out. Use this to
+// route human-readable logs to os.Stderr when stdout must remain clean
+// for a structured payload (e.g. the -json output that downstream
+// consumers parse). If logFile is non-nil, output is mirrored to it with
+// ANSI codes stripped.
+func NewLoggerTo(out io.Writer, logFile io.Writer) *Logger {
+	if out == nil {
+		out = os.Stdout
+	}
+	l := &Logger{out: out, mu: &sync.Mutex{}}
 	if logFile != nil {
 		l.file = StripANSIWriter{logFile}
 	}

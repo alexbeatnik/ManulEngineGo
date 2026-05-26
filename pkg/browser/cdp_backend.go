@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/manulengineer/manulheart/pkg/cdp"
@@ -36,6 +37,40 @@ func (b *CDPBrowser) FirstPage(ctx context.Context) (Page, error) {
 		return nil, fmt.Errorf("browser: dial target %q: %w", target.WSURL, err)
 	}
 	return &CDPPage{conn: conn}, nil
+}
+
+// PageMatching attaches to the first page-type target whose URL contains
+// the given substring (case-insensitive). Returns an error when no target
+// matches; callers should typically fall back to FirstPage or surface a
+// clear error to the user.
+//
+// Chrome's /json/list orders targets most-recently-active first, so when
+// the user has several tabs of the same site open, this picks the one
+// they've used most recently. That matters for multi-tab CDP sessions
+// where "the first page" would otherwise be a lottery.
+func (b *CDPBrowser) PageMatching(ctx context.Context, urlSubstr string) (Page, error) {
+	if urlSubstr == "" {
+		return b.FirstPage(ctx)
+	}
+	targets, err := cdp.ListTargets(ctx, b.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("browser: list targets: %w", err)
+	}
+	needle := strings.ToLower(urlSubstr)
+	for _, t := range targets {
+		if t.Type != "page" {
+			continue
+		}
+		if !strings.Contains(strings.ToLower(t.URL), needle) {
+			continue
+		}
+		conn, err := cdp.DialTarget(ctx, t.WSURL)
+		if err != nil {
+			return nil, fmt.Errorf("browser: dial target %q: %w", t.WSURL, err)
+		}
+		return &CDPPage{conn: conn}, nil
+	}
+	return nil, fmt.Errorf("browser: no page target with URL containing %q (found %d targets)", urlSubstr, len(targets))
 }
 
 // NewPage is not yet implemented for CDP (requires Target.createTarget).

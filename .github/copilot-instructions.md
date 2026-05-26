@@ -20,7 +20,7 @@
 ## CLI INSTALL + VERSION
 
 > **CRITICAL — Read this first.**
-> Current documented ManulHeart CLI version is **0.0.1.2**.
+> Current documented ManulHeart CLI version is **0.0.1.3**.
 > When documenting install or usage, prefer the Go binary as a PATH-visible system command named `manul`
 > (for example `~/.local/bin/manul` or `/usr/local/bin/manul`) so editor extensions can invoke it directly.
 > Do not document the repo-local binary as the only intended integration path when the request is about running from tools or extensions.
@@ -197,6 +197,17 @@ When generating automation logic:
 - `scan.BuildHuntFull(url, groups)` → annotated `.hunt` string with `# ── GroupName ──` section headers
 
 This mirrors ManulEngine's `SCAN_JS` / `FULL_SCAN_JS` behaviour — same JS logic ported to Go-embedded JS strings.
+
+## Stdin Hunt Input (`0.0.1.3`+)
+
+`manul -` (or `manul run - …`) reads a single hunt script from stdin instead of a `.hunt` file. Semantics:
+
+- Parsed via `dsl.Parse(os.Stdin)` and tagged with `SourcePath = "<stdin>"`.
+- `@import:` is resolved against the current working directory (there is no source path to anchor against).
+- Failure now emits a partial `*HuntResult` even when `RunHunt` returns an error, so downstream consumers (e.g. the OS-Manul dispatcher) can read per-step errors instead of being limited to `exit 1`.
+- The failure summary prints as `N/N hunt file(s) failed` instead of `N/0` (counted against `len(hunts)`, not `len(huntFiles)`).
+
+Use cases: editor integrations, CI generators, ad-hoc one-liner runs, dispatcher orchestration. Do not use stdin mode for multi-hunt suites — pass a directory instead.
 
 ## Parallel execution (Go API)
 

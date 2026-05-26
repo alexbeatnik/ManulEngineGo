@@ -146,6 +146,17 @@ Page labels are resolved through `pkg/pages` (`pages/<safe-netloc>.json` next to
 
 `BuildHuntFull` emits `# ── GroupName ──` comment headers; `Page` group is always first, rest are sorted alphabetically. ARIA roles (`textbox`, `combobox`, `switch`) are mapped to the correct DSL verbs (`Fill`, `Select`, `Check`).
 
+## Stdin Hunt Input (`0.0.1.3`+)
+
+`manul -` (or `manul run -`) reads a single hunt script from stdin:
+
+- Parsed via `dsl.Parse(os.Stdin)` and tagged with `SourcePath = "<stdin>"`.
+- `@import:` resolves against the **current working directory** (no source file to anchor on).
+- On failure, the runtime now emits the partial `*HuntResult` even when `RunHunt` returns an error, so dispatchers can read per-step errors instead of being limited to `exit 1`.
+- Failure summary counts against `len(hunts)`, so stdin runs report `1/1`, never `1/0`.
+
+Use cases: editor integrations, CI generators, ad-hoc one-liners, OS-Manul dispatch. For multi-hunt suites pass a directory instead.
+
 ## Visual Parity for Element Highlighting (`0.0.1.0`+)
 
 ManulHeart now matches Python ManulEngine's visual feedback exactly:

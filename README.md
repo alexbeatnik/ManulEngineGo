@@ -121,6 +121,16 @@ Run a single step against a live browser:
 manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
 ```
 
+Pipe a hunt script from stdin (`0.0.1.3`+) — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
+
+```bash
+cat examples/saucedemo.hunt | manul -
+echo 'STEP 1. Open the page
+    NAVIGATE to "https://example.com"' | manul - --headless
+```
+
+When `target` is `-`, ManulHeart parses stdin as a single hunt (source path `<stdin>`), resolves `@import:` relative to the current working directory, and emits a partial `*HuntResult` even if a step fails so downstream tools (e.g. the OS-Manul dispatcher) can read per-step errors instead of being limited to `exit 1`.
+
 ### 4. Scan a page to generate a draft hunt
 
 Basic scan — discovers interactive elements and writes a flat draft `.hunt`:
@@ -174,6 +184,7 @@ The same `.hunt` file against the same page produces the same resolution path ev
 | **Extension API** | `CALL GO` invokes registered Go functions. `RegisterCustomControl` intercepts actions by page+target. |
 | **HTML reports** | Per-hunt styled reports + aggregate `index.html` for parallel runs. |
 | **Page scanner** | `manul scan <URL>` generates a draft `.hunt`; `--full` groups elements by semantic region (form, nav, main, shadow) including Shadow DOM. |
+| **Stdin hunts** | `manul -` reads a hunt script from stdin and always emits a partial result on failure so dispatchers can read per-step errors. |
 | **Zero external deps** | Only `gorilla/websocket`. No Playwright, no Node.js, no Python. |
 
 ---
@@ -306,7 +317,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Documented CLI version:** `0.0.1.2+`
+**Documented CLI version:** `0.0.1.3+`
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

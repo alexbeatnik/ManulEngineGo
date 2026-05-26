@@ -38,6 +38,7 @@ import (
 	"github.com/manulengineer/manulheart/pkg/daemon"
 	"github.com/manulengineer/manulheart/pkg/data"
 	"github.com/manulengineer/manulheart/pkg/dsl"
+	"github.com/manulengineer/manulheart/pkg/explain"
 	"github.com/manulengineer/manulheart/pkg/pages"
 	"github.com/manulengineer/manulheart/pkg/record"
 	"github.com/manulengineer/manulheart/pkg/report"
@@ -56,7 +57,7 @@ func main() {
 	firstArg := os.Args[1]
 
 	if firstArg == "--version" || firstArg == "-version" || firstArg == "-v" {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.2)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.3)\n")
 		os.Stdout.Sync()
 		return
 	}
@@ -140,6 +141,8 @@ func cmdRun(args []string) error {
 	cdpEndpoint := fs.String("cdp", "", "CDP endpoint URL (if set, skip auto-launch and connect to existing browser)")
 	verbose := fs.Bool("verbose", false, "enable verbose logging")
 	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
+	jsonlOut := fs.Bool("jsonl", false, "stream per-step JSON Lines + final HuntResult to stdout (implies -json semantics)")
+	targetSelector := fs.String("target", "", "CDP tab selector, e.g. 'url=youtube.com' to pick the most recently active tab whose URL contains 'youtube.com'")
 	timeout := fs.Duration("timeout", 30*time.Second, "default command timeout")
 	userDataDir := fs.String("user-data-dir", "", "Chrome profile directory (empty = unique temp dir per run)")
 	headless := fs.Bool("headless", false, "run Chrome in headless mode")
@@ -158,7 +161,7 @@ func cmdRun(args []string) error {
 
 	var target string
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: manul <hunt-file|directory> [flags]\n\nFlags:\n")
+		fmt.Fprintf(os.Stderr, "usage: manul <hunt-file|directory|-> [flags]\n\n  Use '-' as target to read the hunt script from stdin.\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
 
@@ -178,7 +181,7 @@ func cmdRun(args []string) error {
 	}
 
 	if *showVersion {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.2)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.3)\n")
 		os.Stdout.Sync()
 		return nil
 	}
@@ -188,18 +191,42 @@ func cmdRun(args []string) error {
 		return fmt.Errorf("hunt file or directory path is required")
 	}
 
-	// Collect .hunt files from target.
-	huntFiles, err := collectHuntFiles(target)
-	if err != nil {
-		return err
-	}
-	if len(huntFiles) == 0 {
-		return fmt.Errorf("no .hunt files found in %q", target)
+	// stdinHunt is populated when target is "-": read the .hunt script from
+	// stdin instead of a file. Imports resolve relative to the current
+	// working directory in that mode (no source path to anchor against).
+	var stdinHunt *dsl.Hunt
+	var huntFiles []string
+	if target == "-" {
+		h, perr := dsl.Parse(os.Stdin)
+		if perr != nil {
+			return fmt.Errorf("parse stdin: %w", perr)
+		}
+		h.SourcePath = "<stdin>"
+		stdinHunt = h
+	} else {
+		// Collect .hunt files from target.
+		var err error
+		huntFiles, err = collectHuntFiles(target)
+		if err != nil {
+			return err
+		}
+		if len(huntFiles) == 0 {
+			return fmt.Errorf("no .hunt files found in %q", target)
+		}
 	}
 
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
+	}
+
+	// CLI --cdp wins over JSON/env. Without this override, runSequential
+	// receives the right cdpEndpoint argument but cfg.CDPEndpoint stays
+	// at config.Default() (""), and the per-hunt CDP banner / NewCDPBrowser
+	// call see an empty endpoint — which downstream resolves to the bogus
+	// "http://json/list" URL.
+	if *cdpEndpoint != "" {
+		cfg.CDPEndpoint = *cdpEndpoint
 	}
 
 	cfg.Verbose = *verbose
@@ -235,58 +262,148 @@ func cmdRun(args []string) error {
 	if *verbose {
 		logLevel = utils.LogLevelDebug
 	}
-	logger := utils.NewLogger(nil).WithLevel(logLevel)
+	// When emitting JSON, keep stdout exclusively for the structured
+	// payload — route human-readable logs to stderr so callers can
+	// `json.Unmarshal(stdout)` directly. -jsonl shares the same routing
+	// rule: stdout is reserved for the streamed payload + final summary.
+	jsonStdout := *jsonOut || *jsonlOut
+	var logger *utils.Logger
+	if jsonStdout {
+		logger = utils.NewLoggerTo(os.Stderr, nil).WithLevel(logLevel)
+	} else {
+		logger = utils.NewLogger(nil).WithLevel(logLevel)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fmt.Fprintf(os.Stderr, "🐾 Manul: found %d hunt file(s)\n", len(huntFiles))
-
-	// Pre-parse all hunts so we can decide between sequential and parallel modes.
 	var hunts []*dsl.Hunt
 	parseFailed := 0
-	for _, huntFile := range huntFiles {
-		hunt, err := dsl.ParseFile(huntFile)
-		if err != nil {
-			logger.Error("parse %q: %v", huntFile, err)
-			parseFailed++
-			continue
+
+	if stdinHunt != nil {
+		fmt.Fprintf(os.Stderr, "🐾 Manul: reading hunt from stdin\n")
+		if err := dsl.ResolveImports(stdinHunt); err != nil {
+			return fmt.Errorf("imports: %w", err)
 		}
-		if err := dsl.ResolveImports(hunt); err != nil {
-			logger.Error("imports %q: %v", huntFile, err)
-			parseFailed++
-			continue
+		if err := stdinHunt.Expand(); err != nil {
+			return fmt.Errorf("expand: %w", err)
 		}
-		if err := hunt.Expand(); err != nil {
-			logger.Error("expand %q: %v", huntFile, err)
-			parseFailed++
-			continue
+		hunts = []*dsl.Hunt{stdinHunt}
+	} else {
+		fmt.Fprintf(os.Stderr, "🐾 Manul: found %d hunt file(s)\n", len(huntFiles))
+		// Pre-parse all hunts so we can decide between sequential and parallel modes.
+		for _, huntFile := range huntFiles {
+			hunt, err := dsl.ParseFile(huntFile)
+			if err != nil {
+				logger.Error("parse %q: %v", huntFile, err)
+				parseFailed++
+				continue
+			}
+			if err := dsl.ResolveImports(hunt); err != nil {
+				logger.Error("imports %q: %v", huntFile, err)
+				parseFailed++
+				continue
+			}
+			if err := hunt.Expand(); err != nil {
+				logger.Error("expand %q: %v", huntFile, err)
+				parseFailed++
+				continue
+			}
+			hunts = append(hunts, hunt)
 		}
-		hunts = append(hunts, hunt)
 	}
 
 	if len(hunts) == 0 {
 		return fmt.Errorf("no hunt files could be parsed")
 	}
 
+	opts := outputOpts{json: *jsonOut, jsonl: *jsonlOut}
+	tabURLSubstr, terr := parseTargetSelector(*targetSelector)
+	if terr != nil {
+		return terr
+	}
+
 	var totalFailed int
 	if cfg.Workers > 1 && len(hunts) > 1 {
 		// Parallel execution via worker pool.
-		totalFailed = runParallel(ctx, cfg, hunts, *jsonOut, logger)
+		if tabURLSubstr != "" {
+			logger.Warn("-target is ignored in --workers >1 (each worker spawns its own Chrome)")
+		}
+		totalFailed = runParallel(ctx, cfg, hunts, opts, logger)
 	} else {
 		// Sequential execution.
-		totalFailed = runSequential(ctx, cfg, hunts, *jsonOut, *cdpEndpoint, *userDataDir, *headless, *executablePath, logger)
+		totalFailed = runSequential(ctx, cfg, hunts, opts, *cdpEndpoint, *userDataDir, *headless, *executablePath, tabURLSubstr, logger)
 	}
 
 	totalFailed += parseFailed
 	if totalFailed > 0 {
-		return fmt.Errorf("%d/%d hunt file(s) failed", totalFailed, len(huntFiles))
+		// Use hunts (not huntFiles) so stdin runs report "1/1" instead
+		// of "1/0".
+		return fmt.Errorf("%d/%d hunt file(s) failed", totalFailed, len(hunts))
 	}
 	return nil
 }
 
+// outputOpts decides how the CLI emits results to stdout. -json prints a
+// single HuntResult at the end; -jsonl streams per-step JSON Lines plus
+// a final HuntResult line. Either flag routes the logger to stderr so
+// stdout stays clean for the structured payload.
+type outputOpts struct {
+	json  bool // print final HuntResult as indented JSON
+	jsonl bool // stream per-step ExecutionResult lines + final HuntResult
+}
+
+func (o outputOpts) anyJSON() bool { return o.json || o.jsonl }
+
+// parseTargetSelector decodes the -target flag value. Currently only
+// "url=<substring>" is recognized — it asks the CDP backend to pick the
+// most-recently-active page whose URL contains <substring>. Empty input
+// is valid and means "fall back to first-page semantics".
+func parseTargetSelector(raw string) (urlSubstr string, err error) {
+	if raw == "" {
+		return "", nil
+	}
+	const prefix = "url="
+	if !strings.HasPrefix(raw, prefix) {
+		return "", fmt.Errorf("--target: unsupported selector %q (expected 'url=<substring>')", raw)
+	}
+	v := strings.TrimSpace(strings.TrimPrefix(raw, prefix))
+	if v == "" {
+		return "", fmt.Errorf("--target: empty 'url=' value")
+	}
+	return v, nil
+}
+
+// newRuntimeWithStreaming wires runtime.New with an onStep callback when
+// -jsonl is active. Each step's ExecutionResult is encoded as a single
+// compact JSON line tagged with `"event":"step"` so consumers can tell
+// streaming rows apart from the final HuntResult.
+func newRuntimeWithStreaming(cfg config.Config, page browser.Page, logger *utils.Logger, opts outputOpts) *runtime.Runtime {
+	rt := runtime.New(cfg, page, logger)
+	if opts.jsonl {
+		enc := json.NewEncoder(os.Stdout)
+		var streamMu sync.Mutex // workers may share stdout
+		rt.SetOnStep(func(r explain.ExecutionResult) {
+			streamMu.Lock()
+			defer streamMu.Unlock()
+			// Wrap in an envelope so the line is self-describing.
+			_ = enc.Encode(map[string]any{
+				"event": "step",
+				"data":  r,
+			})
+			os.Stdout.Sync()
+		})
+	}
+	return rt
+}
+
 // runSequential executes hunts one at a time, launching a single Chrome when needed.
-func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, jsonOut bool, cdpEndpoint, userDataDir string, headless bool, executablePath string, logger *utils.Logger) int {
+//
+// tabURLSubstr, when non-empty, asks the CDP backend to attach to the
+// page whose URL contains this substring (case-insensitive). Empty means
+// "first available page", which matches Chrome's most-recently-active
+// tab in practice.
+func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, opts outputOpts, cdpEndpoint, userDataDir string, headless bool, executablePath, tabURLSubstr string, logger *utils.Logger) int {
 	var chrome *browser.ChromeProcess
 	if cdpEndpoint == "" {
 		opts := browser.DefaultChromeOptions()
@@ -342,7 +459,13 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, js
 		logger.Info("CDP: %s", cfg.CDPEndpoint)
 
 		b := browser.NewCDPBrowser(cfg.CDPEndpoint)
-		page, err := b.FirstPage(ctx)
+		var page browser.Page
+		var err error
+		if tabURLSubstr != "" {
+			page, err = b.PageMatching(ctx, tabURLSubstr)
+		} else {
+			page, err = b.FirstPage(ctx)
+		}
 		if err != nil {
 			logger.Error("connect to browser at %q: %v", cfg.CDPEndpoint, err)
 			totalFailed++
@@ -371,13 +494,13 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, js
 						fmt.Fprintf(os.Stderr, "\n%s\n📊 Data row %d/%d: %v\n%s\n",
 							strings.Repeat("-", 40), rowIdx+1, len(rows), row, strings.Repeat("-", 40))
 					}
-					rt := runtime.New(cfg, page, logger)
+					rt := newRuntimeWithStreaming(cfg, page, logger, opts)
 					result, runErr := rt.RunHunt(ctx, hunt, row)
 					if runErr != nil {
 						logger.Error("hunt %q row %d failed: %v", hunt.SourcePath, rowIdx+1, runErr)
 						allOk = false
 					}
-					printResult(result, jsonOut, logger)
+					printResult(result, opts, logger)
 					if hErr := report.AppendRunHistory("reports", result); hErr != nil {
 						logger.Warn("run_history append failed: %v", hErr)
 					}
@@ -400,14 +523,21 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, js
 			}
 
 			// Standard (non-data-driven) execution.
-			rt := runtime.New(cfg, page, logger)
+			rt := newRuntimeWithStreaming(cfg, page, logger, opts)
 			result, err := rt.RunHunt(ctx, hunt)
 			if err != nil {
 				logger.Error("hunt %q failed: %v", hunt.SourcePath, err)
 				totalFailed++
+				// RunHunt returns a partial *HuntResult even on failure;
+				// emit it so downstream consumers (e.g. the OS-Manul
+				// dispatcher) can read per-step errors instead of being
+				// limited to "exit 1".
+				if result != nil {
+					printResult(result, opts, logger)
+				}
 				return
 			}
-			printResult(result, jsonOut, logger)
+			printResult(result, opts, logger)
 			if hErr := report.AppendRunHistory("reports", result); hErr != nil {
 				logger.Warn("run_history append failed: %v", hErr)
 			}
@@ -428,7 +558,13 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, js
 }
 
 // runParallel executes hunts across a worker pool.
-func runParallel(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, jsonOut bool, logger *utils.Logger) int {
+func runParallel(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, opts outputOpts, logger *utils.Logger) int {
+	if opts.jsonl {
+		// pkg/worker spins its own runtime.Runtime per hunt; per-step
+		// streaming would need a worker-level callback we haven't
+		// surfaced yet. Degrade gracefully to whole-hunt JSON envelopes.
+		fmt.Fprintln(os.Stderr, "warning: -jsonl per-step streaming is not yet supported with --workers >1; emitting hunt-level events only")
+	}
 	fmt.Fprintf(os.Stderr, "🐾 Running %d hunts in parallel (workers: %d)\n", len(hunts), cfg.Workers)
 	results, err := worker.RunHuntsInParallel(ctx, cfg, hunts, cfg.Workers, logger)
 	if err != nil {
@@ -444,7 +580,7 @@ func runParallel(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, json
 			totalFailed++
 			continue
 		}
-		printResult(pr.Result, jsonOut, logger)
+		printResult(pr.Result, opts, logger)
 		if hErr := report.AppendRunHistory("reports", pr.Result); hErr != nil {
 			logger.Warn("run_history append failed: %v", hErr)
 		}
@@ -528,7 +664,13 @@ func cmdRunStep(args []string) error {
 	if *verbose {
 		logLevel = utils.LogLevelDebug
 	}
-	logger := utils.NewLogger(nil).WithLevel(logLevel)
+	// In -json mode, keep stdout clean for the payload.
+	var logger *utils.Logger
+	if *jsonOut {
+		logger = utils.NewLoggerTo(os.Stderr, nil).WithLevel(logLevel)
+	} else {
+		logger = utils.NewLogger(nil).WithLevel(logLevel)
+	}
 
 	ctx := context.Background()
 
@@ -564,11 +706,23 @@ func cmdRunStep(args []string) error {
 
 // ── Output helpers ────────────────────────────────────────────────────────────
 
-func printResult(result any, asJSON bool, logger *utils.Logger) {
-	if asJSON {
+func printResult(result any, opts outputOpts, logger *utils.Logger) {
+	if opts.jsonl {
+		// Streaming: per-step events were already emitted via the
+		// runtime callback. Close out the stream with a single envelope
+		// line carrying the aggregate HuntResult.
+		enc := json.NewEncoder(os.Stdout)
+		_ = enc.Encode(map[string]any{
+			"event": "result",
+			"data":  result,
+		})
+		os.Stdout.Sync()
+		return
+	}
+	if opts.json {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		_ = enc.Encode(result)
 		os.Stdout.Sync()
 		return
 	}
@@ -730,6 +884,7 @@ func printUsage() {
 
 Usage:
   manul <target> [flags]               Run .hunt files in target (file or directory)
+  manul - [flags]                      Read a single hunt script from stdin
   manul run <target> [flags]           Explicit run subcommand
   manul run-step '<command>' [flags]   Execute a single DSL command
   manul scan <URL> [flags]             Scan a URL and generate a draft .hunt file (--full for grouped scan)
