@@ -70,6 +70,9 @@ pkg/
   utils/                   Logger (dual-output: stdout+ANSI, file+stripped) + error types
   pages/                   URL → human-readable page label registry; lean/wrapped JSON
                            forms, longest-prefix site match, auto-populate on first hit
+  scan/                    `manul scan <URL>` — DOM scanner that generates a draft .hunt file;
+                           `ScanPage` (basic, flat) and `ScanPageFull` (grouped by semantic region,
+                           Shadow DOM aware) — mirrors ManulEngine's SCAN_JS / FULL_SCAN_JS
 examples/                  Reference .hunt files (mega.hunt, sampler.hunt, loops_demo.hunt)
 ```
 
@@ -175,6 +178,25 @@ When generating automation logic:
 * Use **quoted strings** for target labels (`'Login'`) to ensure high scoring priority.
 * For tables, use **text identifiers** (`CHECK the checkbox for 'Item ID'`) – let the 3-pass targeting handle the proximity to the actual checkbox input.
 * For custom dropdowns, the engine automatically falls back from `select_option` to `click()` on the resolved target.
+
+## Page Scanner (`manul scan`)
+
+`pkg/scan` implements the `manul scan <URL>` subcommand. Two modes:
+
+| Mode | Command | Output |
+|------|---------|--------|
+| Basic | `manul scan <URL>` | Flat draft `.hunt` — all interactive elements in document order |
+| Full | `manul scan <URL> --full` | Grouped draft — elements organised by semantic region (form, nav, main, dialog, shadow roots) |
+
+**Shadow DOM:** both modes recurse into `el.shadowRoot` — elements from Web Components are included and annotated with `[shadow]` in the full-page group name.
+
+**Go API:**
+- `scan.ScanPage(ctx, url, headless)` → `[]scan.Element`
+- `scan.ScanPageFull(ctx, url, headless)` → `map[string][]scan.FullElement`
+- `scan.BuildHunt(url, elements)` → `.hunt` string
+- `scan.BuildHuntFull(url, groups)` → annotated `.hunt` string with `# ── GroupName ──` section headers
+
+This mirrors ManulEngine's `SCAN_JS` / `FULL_SCAN_JS` behaviour — same JS logic ported to Go-embedded JS strings.
 
 ## Parallel execution (Go API)
 

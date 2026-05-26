@@ -167,3 +167,118 @@ func TestBuildHunt_LongLabelsSkipped(t *testing.T) {
 		t.Fatal("labels > 80 chars should be skipped")
 	}
 }
+
+// ── Full-page scan tests ──────────────────────────────────────────────────────
+
+func TestBuildHuntFull_Basic(t *testing.T) {
+	groups := map[string][]FullElement{
+		"Form: Login": {
+			{Role: "textbox", Label: "Email", Locator: "#email", Tag: "input", Editable: true},
+			{Role: "button", Label: "Sign In", Locator: "text=Sign In", Tag: "button", Editable: false},
+		},
+		"Page": {
+			{Role: "link", Label: "Forgot password", Locator: "text=Forgot password", Tag: "a"},
+		},
+	}
+	hunt := BuildHuntFull("https://example.com", groups)
+	if !strings.Contains(hunt, "NAVIGATE to https://example.com") {
+		t.Fatal("missing NAVIGATE step")
+	}
+	if !strings.Contains(hunt, "WAIT 2") {
+		t.Fatal("missing WAIT step")
+	}
+	if !strings.Contains(hunt, "DONE.") {
+		t.Fatal("missing DONE")
+	}
+	if !strings.Contains(hunt, "Fill 'Email'") {
+		t.Fatal("missing Email fill step")
+	}
+	if !strings.Contains(hunt, "Click the 'Sign In' button") {
+		t.Fatal("missing Sign In button step")
+	}
+	if !strings.Contains(hunt, "Click the 'Forgot password' link") {
+		t.Fatal("missing Forgot password link step")
+	}
+	if !strings.Contains(hunt, "# ── Form: Login ──") {
+		t.Fatal("missing group comment for Form: Login")
+	}
+}
+
+func TestBuildHuntFull_PageGroupFirst(t *testing.T) {
+	groups := map[string][]FullElement{
+		"Nav": {
+			{Role: "link", Label: "Home", Locator: "text=Home", Tag: "a"},
+		},
+		"Page": {
+			{Role: "button", Label: "Subscribe", Locator: "text=Subscribe", Tag: "button"},
+		},
+	}
+	hunt := BuildHuntFull("https://example.com", groups)
+	pageIdx := strings.Index(hunt, "# ── Page ──")
+	navIdx := strings.Index(hunt, "# ── Nav ──")
+	if pageIdx == -1 || navIdx == -1 {
+		t.Fatal("missing group headers")
+	}
+	if pageIdx > navIdx {
+		t.Fatal("Page group should come before Nav group")
+	}
+}
+
+func TestBuildHuntFull_SkipsUseless(t *testing.T) {
+	groups := map[string][]FullElement{
+		"Page": {
+			{Role: "button", Label: "click", Tag: "button"},
+			{Role: "button", Label: "Submit Form", Tag: "button"},
+			{Role: "link", Label: "", Tag: "a"},
+		},
+	}
+	hunt := BuildHuntFull("https://example.com", groups)
+	if strings.Contains(hunt, "'click'") {
+		t.Fatal("'click' label should be skipped")
+	}
+	if !strings.Contains(hunt, "Submit Form") {
+		t.Fatal("'Submit Form' should appear")
+	}
+}
+
+func TestBuildHuntFull_SkipsDuplicates(t *testing.T) {
+	groups := map[string][]FullElement{
+		"Page": {
+			{Role: "button", Label: "Buy Now", Tag: "button"},
+			{Role: "button", Label: "Buy Now", Tag: "button"},
+		},
+		"Form: Cart": {
+			{Role: "button", Label: "Buy Now", Tag: "button"},
+		},
+	}
+	hunt := BuildHuntFull("https://example.com", groups)
+	c := strings.Count(hunt, "Buy Now")
+	if c != 1 {
+		t.Fatalf("expected 1 'Buy Now' after cross-group dedup, got %d", c)
+	}
+}
+
+func TestBuildHuntFull_ShadowGroupAnnotated(t *testing.T) {
+	groups := map[string][]FullElement{
+		"Page [shadow]": {
+			{Role: "button", Label: "Dark Mode", Tag: "button"},
+		},
+	}
+	hunt := BuildHuntFull("https://example.com", groups)
+	if !strings.Contains(hunt, "# ── Page [shadow] ──") {
+		t.Fatal("shadow group should appear with [shadow] annotation")
+	}
+	if !strings.Contains(hunt, "Dark Mode") {
+		t.Fatal("shadow DOM element should be included in hunt")
+	}
+}
+
+func TestBuildHuntFull_NoElements(t *testing.T) {
+	hunt := BuildHuntFull("https://empty.com", nil)
+	if !strings.Contains(hunt, "NAVIGATE to https://empty.com") {
+		t.Fatal("missing NAVIGATE")
+	}
+	if !strings.Contains(hunt, "DONE.") {
+		t.Fatal("missing DONE")
+	}
+}

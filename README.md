@@ -121,6 +121,24 @@ Run a single step against a live browser:
 manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
 ```
 
+### 4. Scan a page to generate a draft hunt
+
+Basic scan — discovers interactive elements and writes a flat draft `.hunt`:
+
+```bash
+manul scan https://example.com
+manul scan https://example.com --output tests/draft.hunt --headless
+```
+
+Full-page scan — groups elements by semantic region (forms, navigation, main content, Shadow DOM roots) and produces an annotated draft:
+
+```bash
+manul scan https://example.com --full
+manul scan https://example.com --full --output tests/draft.hunt --headless
+```
+
+The `--full` mode mirrors ManulEngine's `FULL_SCAN_JS` — it traverses the entire DOM including Shadow DOM, resolves landmark containers (`<form>`, `<nav>`, `<main>`, `<dialog>`, ARIA roles), and groups elements under human-readable section headers so the draft is easier to read and trim.
+
 ---
 
 ## Philosophy
@@ -155,6 +173,7 @@ The same `.hunt` file against the same page produces the same resolution path ev
 | **Interactive debugger** | `--debug` pauses before every step; `PAUSE` command; breakpoint lines; browser modal UI. |
 | **Extension API** | `CALL GO` invokes registered Go functions. `RegisterCustomControl` intercepts actions by page+target. |
 | **HTML reports** | Per-hunt styled reports + aggregate `index.html` for parallel runs. |
+| **Page scanner** | `manul scan <URL>` generates a draft `.hunt`; `--full` groups elements by semantic region (form, nav, main, shadow) including Shadow DOM. |
 | **Zero external deps** | Only `gorilla/websocket`. No Playwright, no Node.js, no Python. |
 
 ---
@@ -290,6 +309,8 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 **Documented CLI version:** `0.0.1.1+`
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
+
+> **VS Code Extension:** The [Manul Engine Extension](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) supports ManulHeart out of the box. Open a workspace containing `go.mod` and the extension auto-detects the Go runtime, surfaces `CALL GO` snippets, and validates `CALL GO` steps inside hook blocks.
 
 ---
 

@@ -655,6 +655,7 @@ func cmdScan(args []string) error {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	output := fs.String("output", "draft.hunt", "output file for the draft")
 	headless := fs.Bool("headless", false, "run browser in headless mode")
+	full := fs.Bool("full", false, "full-page scan: group elements by semantic region (form, nav, main, shadow…)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -662,6 +663,9 @@ func cmdScan(args []string) error {
 	if url == "" {
 		fs.Usage()
 		return fmt.Errorf("URL is required")
+	}
+	if *full {
+		return scan.RunFull(context.Background(), url, *output, *headless)
 	}
 	return scan.Run(context.Background(), url, *output, *headless)
 }
@@ -728,7 +732,7 @@ Usage:
   manul <target> [flags]               Run .hunt files in target (file or directory)
   manul run <target> [flags]           Explicit run subcommand
   manul run-step '<command>' [flags]   Execute a single DSL command
-  manul scan <URL> [flags]             Scan a URL and generate a draft .hunt file
+  manul scan <URL> [flags]             Scan a URL and generate a draft .hunt file (--full for grouped scan)
   manul record <URL> [flags]           Record interactions and generate a .hunt file
   manul daemon <directory> [flags]     Run scheduled .hunt files continuously
   manul pages list                     List every site → pattern → label mapping under pages/
