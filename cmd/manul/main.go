@@ -807,21 +807,71 @@ func cmdRecord(args []string) error {
 // cmdScan handles the `scan` subcommand.
 func cmdScan(args []string) error {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
-	output := fs.String("output", "draft.hunt", "output file for the draft")
-	headless := fs.Bool("headless", false, "run browser in headless mode")
+	output := fs.String("output", "draft.hunt", "output file for the draft (ignored in -json mode)")
+	headless := fs.Bool("headless", false, "run browser in headless mode (ignored when --cdp is set)")
 	full := fs.Bool("full", false, "full-page scan: group elements by semantic region (form, nav, main, shadow…)")
+	cdpEndpoint := fs.String("cdp", "", "scan an already-loaded page via this CDP endpoint instead of launching Chrome (URL arg becomes optional)")
+	jsonOut := fs.Bool("json", false, "emit the grouped scan result as JSON on stdout instead of writing a .hunt draft")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+
+	ctx := context.Background()
+
+	// CDP path: probe an existing Chrome's current page. Used by external
+	// drivers (e.g. OS-Manul) that own the browser lifecycle. URL arg is
+	// optional because we don't navigate — we read whatever's loaded.
+	if *cdpEndpoint != "" {
+		if !*full {
+			return fmt.Errorf("scan --cdp currently only supports --full mode")
+		}
+		groups, err := scan.ScanPageFullCDP(ctx, *cdpEndpoint)
+		if err != nil {
+			return err
+		}
+		if *jsonOut {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(groups)
+		}
+		// CDP + non-JSON: still write the .hunt draft so the human-driven
+		// flow stays useful. URL isn't known at the CLI level, fall back
+		// to a placeholder.
+		huntText := scan.BuildHuntFull("about:current", groups)
+		absOut, _ := filepath.Abs(*output)
+		_ = os.MkdirAll(filepath.Dir(absOut), 0755)
+		if err := os.WriteFile(absOut, []byte(huntText), 0644); err != nil {
+			return fmt.Errorf("write output: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "✅ Draft saved → %s\n", absOut)
+		return nil
+	}
+
 	url := fs.Arg(0)
 	if url == "" {
 		fs.Usage()
-		return fmt.Errorf("URL is required")
+		return fmt.Errorf("URL is required (or pass --cdp to scan an already-open page)")
 	}
+
+	if *jsonOut {
+		// JSON over the launch-Chrome path: do the scan, emit JSON, skip
+		// the .hunt write. Keeps stdout clean for downstream consumers.
+		if !*full {
+			return fmt.Errorf("scan -json currently only supports --full mode")
+		}
+		groups, err := scan.ScanPageFull(ctx, url, *headless)
+		if err != nil {
+			return err
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(groups)
+	}
+
 	if *full {
-		return scan.RunFull(context.Background(), url, *output, *headless)
+		return scan.RunFull(ctx, url, *output, *headless)
 	}
-	return scan.Run(context.Background(), url, *output, *headless)
+	return scan.Run(ctx, url, *output, *headless)
 }
 
 // cmdPages handles the `pages` subcommand.

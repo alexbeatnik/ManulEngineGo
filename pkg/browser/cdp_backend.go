@@ -121,7 +121,19 @@ func (p *CDPPage) Navigate(ctx context.Context, url string) error {
 }
 
 func (p *CDPPage) EvalJS(ctx context.Context, expr string) ([]byte, error) {
-	raw, err := cdp.Evaluate(ctx, p.conn, expr)
+	// Callers commonly pass an arrow-function literal like `() => {...}` —
+	// intending to run it, not just evaluate the function object. Plain
+	// Runtime.evaluate on such an expression returns the function (which
+	// serializes to `{}` under returnByValue) and produces zero scan
+	// results. Auto-invoke it so the JS body actually runs.
+	wrappedExpr := expr
+	trimmed := strings.TrimSpace(expr)
+	if strings.HasPrefix(trimmed, "() =>") || strings.HasPrefix(trimmed, "()=>") ||
+		strings.HasPrefix(trimmed, "function") {
+		wrappedExpr = "(" + trimmed + ")()"
+	}
+
+	raw, err := cdp.Evaluate(ctx, p.conn, wrappedExpr)
 	if err != nil {
 		return nil, err
 	}

@@ -141,6 +141,20 @@ Verbose mode logs:
 
 ---
 
+## 8. Pipe a hunt from stdin (`0.0.1.3`+)
+
+Pass `-` as the target to read a hunt script from stdin instead of a file:
+
+```bash
+cat examples/login.hunt | manul -
+echo 'STEP 1: Open page
+    NAVIGATE to "https://example.com"' | manul - --headless
+```
+
+`@import:` paths resolve against the **current working directory**. On failure, ManulHeart still emits a partial `*HuntResult` with per-step errors — useful for editor integrations and CI pipelines that need more detail than `exit 1`.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |

@@ -479,6 +479,17 @@ func ScanPageFull(ctx context.Context, url string, headless bool) (map[string][]
 	_ = page.Wait(ctx, 2*time.Second)
 	_ = page.WaitForLoad(ctx)
 
+	return ScanCurrentPageFull(ctx, page)
+}
+
+// ScanCurrentPageFull runs the full-page scan against an already-connected
+// Page. Use when you've already navigated (typically because the page is
+// being driven through an existing CDP session) and just want the
+// landmark-grouped element map for the page that's currently visible.
+//
+// Same return shape as ScanPageFull, but with no Chrome lifecycle and no
+// navigation — strictly a JS probe on whatever's loaded right now.
+func ScanCurrentPageFull(ctx context.Context, page browser.Page) (map[string][]FullElement, error) {
 	raw, err := page.EvalJS(ctx, FULL_SCAN_JS)
 	if err != nil {
 		return nil, fmt.Errorf("full scan js: %w", err)
@@ -493,6 +504,26 @@ func ScanPageFull(ctx context.Context, url string, headless bool) (map[string][]
 		}
 	}
 	return groups, nil
+}
+
+// ScanPageFullCDP runs the full-page scan against an external Chrome via
+// its CDP endpoint, without launching or navigating. Attaches to the first
+// available page target and probes whatever's currently loaded.
+//
+// This is the integration entry point for callers (OS-Manul, IDE
+// extensions, …) that own the Chrome lifecycle themselves and want the
+// landmark map of the page their user is looking at right now.
+func ScanPageFullCDP(ctx context.Context, cdpEndpoint string) (map[string][]FullElement, error) {
+	if cdpEndpoint == "" {
+		return nil, fmt.Errorf("scan: cdp endpoint required")
+	}
+	b := browser.NewCDPBrowser(cdpEndpoint)
+	page, err := b.FirstPage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("scan: connect to page at %q: %w", cdpEndpoint, err)
+	}
+	defer page.Close()
+	return ScanCurrentPageFull(ctx, page)
 }
 
 // RunFull is the entry point for `manul scan --full <URL>`.
