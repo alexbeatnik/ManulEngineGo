@@ -204,7 +204,7 @@ The transport is ~300 lines. The domain helpers (`Navigate`, `Evaluate`, `Click`
 | Go function calls | `pkg/runtime` — `RegisterGoCall(name, handler)` |
 | Screenshots | `pkg/cdp` — `Page.captureScreenshot` |
 | Scan-page | `manul scan <URL>` — `pkg/scan` with basic and `--full` modes (`0.0.1.2`+) |
-| Stdin input | `manul -` reads a hunt script from stdin; `@import:` resolves against CWD (`0.0.1.3`+) |
+| Stdin input | `manul -` reads a hunt script from stdin; `@import:` resolves against CWD (`0.0.1.4`+) |
 | Semantic cache | `pkg/runtime` — XPath reuse from previous steps |
 | Shadow DOM | `pkg/heuristics` — TreeWalker crossing shadow-root boundaries |
 | Proximity targeting | `pkg/runtime` — 3-pass resolution for restrictive inputs |

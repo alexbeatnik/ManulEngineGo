@@ -141,7 +141,7 @@ Verbose mode logs:
 
 ---
 
-## 8. Pipe a hunt from stdin (`0.0.1.3`+)
+## 8. Pipe a hunt from stdin (`0.0.1.4`+)
 
 Pass `-` as the target to read a hunt script from stdin instead of a file:
 

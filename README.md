@@ -121,7 +121,7 @@ Run a single step against a live browser:
 manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
 ```
 
-Pipe a hunt script from stdin (`0.0.1.3`+) — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
+Pipe a hunt script from stdin (`0.0.1.4`+) — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
 
 ```bash
 cat examples/saucedemo.hunt | manul -
@@ -317,7 +317,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Documented CLI version:** `0.0.1.3+`
+**Documented CLI version:** `0.0.1.4+`
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

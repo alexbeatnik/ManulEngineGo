@@ -20,7 +20,7 @@
 ## CLI INSTALL + VERSION
 
 > **CRITICAL — Read this first.**
-> Current documented ManulHeart CLI version is **0.0.1.3**.
+> Current documented ManulHeart CLI version is **0.0.1.4**.
 > When documenting install or usage, prefer the Go binary as a PATH-visible system command named `manul`
 > (for example `~/.local/bin/manul` or `/usr/local/bin/manul`) so editor extensions can invoke it directly.
 > Do not document the repo-local binary as the only intended integration path when the request is about running from tools or extensions.
@@ -198,7 +198,7 @@ When generating automation logic:
 
 This mirrors ManulEngine's `SCAN_JS` / `FULL_SCAN_JS` behaviour — same JS logic ported to Go-embedded JS strings.
 
-## Stdin Hunt Input (`0.0.1.3`+)
+## Stdin Hunt Input (`0.0.1.4`+)
 
 `manul -` (or `manul run - …`) reads a single hunt script from stdin instead of a `.hunt` file. Semantics:
 

@@ -164,7 +164,7 @@ Page labels are resolved through `pkg/pages` (`pages/<safe-netloc>.json` next to
 
 `BuildHuntFull` emits `# ── GroupName ──` comment headers; `Page` group is always first, rest are sorted alphabetically. ARIA roles (`textbox`, `combobox`, `switch`) are mapped to the correct DSL verbs (`Fill`, `Select`, `Check`).
 
-## Stdin Hunt Input (`0.0.1.3`+)
+## Stdin Hunt Input (`0.0.1.4`+)
 
 `manul -` (or `manul run -`) reads a single hunt script from stdin:
 
