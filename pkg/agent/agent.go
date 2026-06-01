@@ -24,6 +24,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/manulengineer/manulheart/pkg/dsl"
 	"github.com/manulengineer/manulheart/pkg/explain"
 	"github.com/manulengineer/manulheart/pkg/runtime"
+	"github.com/manulengineer/manulheart/pkg/scan"
 	"github.com/manulengineer/manulheart/pkg/utils"
 )
 
@@ -405,6 +407,160 @@ func candidateLabel(c explain.Candidate) string {
 		}
 	}
 	return ""
+}
+
+// MapBudget bounds a Map call so the result stays cheap for an LLM prompt.
+type MapBudget struct {
+	// MaxPerGroup caps how many elements are returned per landmark group.
+	// 0 → DefaultMaxPerGroup.
+	MaxPerGroup int
+	// IncludeUnlabeled keeps elements with no human-visible label. Off by
+	// default — unlabeled controls are rarely useful targets for an agent.
+	IncludeUnlabeled bool
+}
+
+// DefaultMaxPerGroup is the per-group cap when MapBudget.MaxPerGroup is 0.
+const DefaultMaxPerGroup = 8
+
+// MapElement is one interactive element in a PageMap group.
+type MapElement struct {
+	Label string `json:"label"`
+	Role  string `json:"role"`
+}
+
+// MapGroup is a landmark region and its (budgeted) elements.
+type MapGroup struct {
+	// Name is the landmark label ("Page", "Main", "Nav: …", "… [shadow]").
+	Name string `json:"name"`
+	// Elements are the kept, deduped, capped elements in this group.
+	Elements []MapElement `json:"elements"`
+	// Truncated is how many elements were dropped by the per-group cap.
+	Truncated int `json:"truncated,omitempty"`
+}
+
+// PageMap is the landmark-grouped, budgeted view of the current page. Groups
+// are ordered for an agent: Page first, then useful landmarks (Main / forms /
+// results), then chrome (header / nav / footer), then the rest alphabetically.
+type PageMap struct {
+	URL    string     `json:"url,omitempty"`
+	Groups []MapGroup `json:"groups"`
+}
+
+// Map returns a landmark-grouped, budgeted scan of the page currently loaded
+// in the session — the structural map an agent uses to pick a target by its
+// exact visible label. It runs a single full-scan JS probe (no navigation,
+// no Chrome lifecycle) and applies the budget in Go.
+//
+// This is the deliberate, bounded alternative to dumping the whole DOM: the
+// caller controls the cost via MapBudget, and gets back stable, deduped,
+// ranked groups instead of raw element noise.
+func (s *Session) Map(ctx context.Context, budget MapBudget) (PageMap, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return PageMap{}, fmt.Errorf("agent: session closed")
+	}
+
+	groups, err := scan.ScanCurrentPageFull(ctx, s.page)
+	if err != nil {
+		return PageMap{}, fmt.Errorf("agent: map: %w", err)
+	}
+
+	max := budget.MaxPerGroup
+	if max <= 0 {
+		max = DefaultMaxPerGroup
+	}
+
+	url, _ := s.page.CurrentURL(ctx)
+	pm := PageMap{URL: url}
+
+	names := make([]string, 0, len(groups))
+	for name := range groups {
+		names = append(names, name)
+	}
+	sortGroupsForAgent(names)
+
+	for _, name := range names {
+		kept := dedupeUseful(groups[name], budget.IncludeUnlabeled)
+		if len(kept) == 0 {
+			continue
+		}
+		g := MapGroup{Name: name}
+		if len(kept) > max {
+			g.Truncated = len(kept) - max
+			kept = kept[:max]
+		}
+		for _, e := range kept {
+			role := e.Role
+			if role == "" {
+				role = e.Tag
+			}
+			g.Elements = append(g.Elements, MapElement{Label: strings.TrimSpace(e.Label), Role: role})
+		}
+		pm.Groups = append(pm.Groups, g)
+	}
+	return pm, nil
+}
+
+// dedupeUseful drops unlabeled (unless allowed) and duplicate-label elements,
+// preserving order. Mirrors the filtering a consumer would otherwise hand-roll.
+func dedupeUseful(items []scan.FullElement, includeUnlabeled bool) []scan.FullElement {
+	seen := make(map[string]bool, len(items))
+	out := make([]scan.FullElement, 0, len(items))
+	for _, e := range items {
+		label := strings.TrimSpace(e.Label)
+		if label == "" && !includeUnlabeled {
+			continue
+		}
+		key := strings.ToLower(label)
+		if key == "" {
+			key = e.Tag + "|" + e.Locator
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, e)
+	}
+	return out
+}
+
+// sortGroupsForAgent orders landmark groups so the most target-rich regions
+// come first. The ranking is guidance, not contract — callers should treat
+// the order as a hint. Within the same rank, groups sort alphabetically.
+func sortGroupsForAgent(groups []string) {
+	sort.Slice(groups, func(i, j int) bool {
+		ri, rj := groupRank(groups[i]), groupRank(groups[j])
+		if ri != rj {
+			return ri < rj
+		}
+		return groups[i] < groups[j]
+	})
+}
+
+func groupRank(name string) int {
+	u := strings.ToUpper(name)
+	switch {
+	case u == "PAGE":
+		return 0
+	case strings.HasPrefix(u, "MAIN"):
+		return 1
+	case strings.Contains(u, "SEARCH") || strings.Contains(u, "RESULT"):
+		return 2
+	case strings.HasPrefix(u, "FORM") || strings.HasPrefix(u, "DIALOG"):
+		return 3
+	case strings.HasPrefix(u, "ARTICLE") || strings.HasPrefix(u, "SECTION"):
+		return 4
+	case strings.HasPrefix(u, "HEADER") || strings.Contains(u, "MASTHEAD"):
+		return 7
+	case strings.HasPrefix(u, "NAV"):
+		return 8
+	case strings.HasPrefix(u, "ASIDE") || strings.HasPrefix(u, "SIDEBAR"):
+		return 9
+	case strings.HasPrefix(u, "FOOTER"):
+		return 10
+	}
+	return 5
 }
 
 // isNotFound reports whether an EXTRACT result represents "target resolved to

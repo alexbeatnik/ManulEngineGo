@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/manulengineer/manulheart/pkg/config"
@@ -185,6 +186,89 @@ func TestRun_AggregatesAndRecords(t *testing.T) {
 		if !r.OK || r.Reason != ReasonOK {
 			t.Errorf("step not clean: %+v", r)
 		}
+	}
+}
+
+// scanMockPage embeds MockPage and overrides EvalJS so the full-scan probe
+// returns canned landmark-grouped JSON — letting us exercise Map's budgeting
+// without a real browser. All other Page methods are promoted from MockPage.
+type scanMockPage struct {
+	*runtime.MockPage
+	fullScanJSON string
+}
+
+func (p *scanMockPage) EvalJS(ctx context.Context, expr string) ([]byte, error) {
+	if strings.Contains(expr, "document.title") {
+		return p.MockPage.EvalJS(ctx, expr)
+	}
+	return []byte(p.fullScanJSON), nil
+}
+
+func newScanSession(json string) *Session {
+	page := &scanMockPage{MockPage: &runtime.MockPage{URL: "https://example.com"}, fullScanJSON: json}
+	return &Session{
+		rt:   runtime.New(config.Default(), page, utils.NewLogger(nil)),
+		page: page,
+	}
+}
+
+func TestMap_BudgetsAndRanks(t *testing.T) {
+	// Footer declared before Main/Page; budgeting + ranking must reorder and
+	// cap. "Apply" appears twice in Main → deduped to one.
+	json := `{
+		"Footer": [{"label":"Privacy","role":"link","tag":"a"}],
+		"Main":   [{"label":"Apply","role":"button","tag":"button"},
+		           {"label":"Apply","role":"button","tag":"button"},
+		           {"label":"Cancel","role":"button","tag":"button"},
+		           {"label":"Help","role":"link","tag":"a"}],
+		"Page":   [{"label":"Home","role":"link","tag":"a"}]
+	}`
+	sess := newScanSession(json)
+
+	pm, err := sess.Map(context.Background(), MapBudget{MaxPerGroup: 2})
+	if err != nil {
+		t.Fatalf("Map failed: %v", err)
+	}
+
+	if len(pm.Groups) != 3 {
+		t.Fatalf("expected 3 groups, got %d: %+v", len(pm.Groups), pm.Groups)
+	}
+	// Ranking: Page (0) → Main (1) → Footer (10).
+	if pm.Groups[0].Name != "Page" || pm.Groups[1].Name != "Main" || pm.Groups[2].Name != "Footer" {
+		t.Errorf("groups not ranked as Page/Main/Footer: %v %v %v",
+			pm.Groups[0].Name, pm.Groups[1].Name, pm.Groups[2].Name)
+	}
+	// Main had 4 (one dup) → 3 unique, capped at 2 → Truncated=1.
+	main := pm.Groups[1]
+	if len(main.Elements) != 2 || main.Truncated != 1 {
+		t.Errorf("Main budget wrong: %d elements, truncated=%d", len(main.Elements), main.Truncated)
+	}
+	if main.Elements[0].Label != "Apply" {
+		t.Errorf("expected deduped Apply first in Main, got %q", main.Elements[0].Label)
+	}
+}
+
+func TestMap_DropsUnlabeledByDefault(t *testing.T) {
+	json := `{"Main":[{"label":"","role":"button","tag":"button"},{"label":"OK","role":"button","tag":"button"}]}`
+	sess := newScanSession(json)
+
+	pm, err := sess.Map(context.Background(), MapBudget{})
+	if err != nil {
+		t.Fatalf("Map failed: %v", err)
+	}
+	if len(pm.Groups) != 1 || len(pm.Groups[0].Elements) != 1 {
+		t.Fatalf("expected 1 labeled element, got %+v", pm.Groups)
+	}
+	if pm.Groups[0].Elements[0].Label != "OK" {
+		t.Errorf("expected only 'OK', got %q", pm.Groups[0].Elements[0].Label)
+	}
+}
+
+func TestMap_OnClosedSession(t *testing.T) {
+	sess := newScanSession(`{}`)
+	_ = sess.Close()
+	if _, err := sess.Map(context.Background(), MapBudget{}); err == nil {
+		t.Errorf("expected error mapping a closed session")
 	}
 }
 
