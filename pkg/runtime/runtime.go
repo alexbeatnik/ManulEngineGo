@@ -346,6 +346,21 @@ func (rt *Runtime) RunStep(ctx context.Context, rawStep string) (*StepResult, er
 	}, execErr
 }
 
+// RunCommand executes a single already-parsed DSL command and returns the
+// full structured ExecutionResult — including the targeting decision chain
+// (ranked candidates, winner score) and any extracted ActionValue.
+//
+// Unlike RunStep, which collapses the result into a thin pass/fail record,
+// RunCommand preserves everything callers need to build their own compact
+// views. It is the primitive that pkg/agent is built on. The command runs
+// on the runtime's own goroutine and obeys the single-goroutine contract.
+func (rt *Runtime) RunCommand(ctx context.Context, cmd dsl.Command) (explain.ExecutionResult, error) {
+	if err := ctx.Err(); err != nil {
+		return explain.ExecutionResult{}, err
+	}
+	return rt.executeCommand(ctx, cmd)
+}
+
 func (rt *Runtime) resolveAnchor(ctx context.Context, label string, elements []dom.ElementSnapshot) (*scorer.AnchorContext, error) {
 	if label == "" {
 		return nil, nil
