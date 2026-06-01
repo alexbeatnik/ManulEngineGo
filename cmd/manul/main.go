@@ -33,6 +33,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alexbeatnik/ManulHeart/pkg/agent"
 	"github.com/alexbeatnik/ManulHeart/pkg/browser"
 	"github.com/alexbeatnik/ManulHeart/pkg/config"
 	"github.com/alexbeatnik/ManulHeart/pkg/daemon"
@@ -57,7 +58,7 @@ func main() {
 	firstArg := os.Args[1]
 
 	if firstArg == "--version" || firstArg == "-version" || firstArg == "-v" {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.4)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.2.0)\n")
 		os.Stdout.Sync()
 		return
 	}
@@ -80,6 +81,11 @@ func main() {
 		}
 	case "run-step":
 		if err := cmdRunStep(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "read":
+		if err := cmdRead(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -181,7 +187,7 @@ func cmdRun(args []string) error {
 	}
 
 	if *showVersion {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.1.4)\n")
+		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.2.0)\n")
 		os.Stdout.Sync()
 		return nil
 	}
@@ -641,6 +647,7 @@ func cmdRunStep(args []string) error {
 	cdpEndpoint := fs.String("cdp", "http://127.0.0.1:9222", "CDP endpoint URL")
 	verbose := fs.Bool("verbose", false, "enable verbose logging")
 	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
+	compact := fs.Bool("compact", false, "emit the compact agent StepOutcome (reason + top candidates, no scorer breakdown) as JSON")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: driver run-step '<command>' [flags]\n\nFlags:\n")
@@ -654,6 +661,12 @@ func cmdRunStep(args []string) error {
 	if step == "" {
 		fs.Usage()
 		return fmt.Errorf("DSL command is required")
+	}
+
+	// --compact routes through pkg/agent so the CLI and embedded consumers
+	// share one code path and one result shape.
+	if *compact {
+		return runStepCompact(*cdpEndpoint, step)
 	}
 
 	cfg := config.Default()
@@ -701,6 +714,103 @@ func cmdRunStep(args []string) error {
 		}
 	}
 
+	return nil
+}
+
+// runStepCompact executes one step via pkg/agent and emits the compact
+// StepOutcome JSON (ok/action/value/url/reason/score/near). On a failed step
+// it still prints the outcome but returns an error so the process exits
+// non-zero — letting a caller branch on exit code without parsing.
+func runStepCompact(cdpEndpoint, step string) error {
+	ctx := context.Background()
+	sess, err := agent.Attach(ctx, cdpEndpoint, "", agent.Options{})
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+
+	out, stepErr := sess.Step(ctx, step)
+	if jErr := emitJSON(out); jErr != nil {
+		return jErr
+	}
+	if stepErr != nil {
+		// The outcome (with reason + near) is already on stdout; signal
+		// failure via exit code without duplicating the message.
+		return fmt.Errorf("step failed: %s", out.Reason)
+	}
+	return nil
+}
+
+// cmdRead implements `manul read "<target>" [--cdp ...] [--selector ...] [--json]`.
+//
+// It is the CLI face of agent.Session.Read / ReadText — a zero-scan way to pull
+// one value (or a region's text) off the page an agent already has open. With
+// --selector it returns the sanitized visible text of that CSS region (ReadText);
+// without it, it resolves the human-labelled target and extracts its value (Read).
+func cmdRead(args []string) error {
+	fs := flag.NewFlagSet("read", flag.ExitOnError)
+	cdpEndpoint := fs.String("cdp", "http://127.0.0.1:9222", "CDP endpoint URL")
+	selector := fs.String("selector", "", "CSS selector for region text (uses ReadText instead of targeted Read)")
+	urlSubstr := fs.String("tab", "", "attach to the page whose URL contains this substring")
+	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: manul read '<target>' [flags]\n\n"+
+			"  Reads one value off an already-open page (no full scan).\n"+
+			"  With --selector, returns the sanitized text of that CSS region.\n\nFlags:\n")
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	target := fs.Arg(0)
+	if target == "" && *selector == "" {
+		fs.Usage()
+		return fmt.Errorf("a target label or --selector is required")
+	}
+
+	ctx := context.Background()
+	sess, err := agent.Attach(ctx, *cdpEndpoint, *urlSubstr, agent.Options{})
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+
+	if *selector != "" {
+		text, terr := sess.ReadText(ctx, *selector)
+		if terr != nil {
+			return terr
+		}
+		if *jsonOut {
+			return emitJSON(map[string]any{"text": text, "selector": *selector})
+		}
+		fmt.Println(text)
+		return nil
+	}
+
+	v, rerr := sess.Read(ctx, target)
+	if rerr != nil {
+		return rerr
+	}
+	if *jsonOut {
+		return emitJSON(map[string]any{"value": v.Text, "found": v.Found})
+	}
+	if !v.Found {
+		// Distinguish "nothing there" from an error: empty stdout, exit 0.
+		return nil
+	}
+	fmt.Println(v.Text)
+	return nil
+}
+
+// emitJSON writes v as indented JSON to stdout, keeping the payload clean.
+func emitJSON(v any) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		return err
+	}
+	os.Stdout.Sync()
 	return nil
 }
 
@@ -936,7 +1046,8 @@ Usage:
   manul <target> [flags]               Run .hunt files in target (file or directory)
   manul - [flags]                      Read a single hunt script from stdin
   manul run <target> [flags]           Explicit run subcommand
-  manul run-step '<command>' [flags]   Execute a single DSL command
+  manul run-step '<command>' [flags]   Execute a single DSL command (--compact for agent StepOutcome)
+  manul read '<target>' [flags]        Read one value off an open page (zero-scan; --selector for region text)
   manul scan <URL> [flags]             Scan a URL and generate a draft .hunt file (--full for grouped scan)
   manul record <URL> [flags]           Record interactions and generate a .hunt file
   manul daemon <directory> [flags]     Run scheduled .hunt files continuously
@@ -977,5 +1088,8 @@ Examples:
   manul --workers 4 tests/
   manul --tags smoke tests/
   manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
+  manul run-step "Click 'Checkout'" --compact --cdp http://127.0.0.1:9222
+  manul read "Order total" --cdp http://127.0.0.1:9222
+  manul read --selector "#answer" --cdp http://127.0.0.1:9222
 `)
 }

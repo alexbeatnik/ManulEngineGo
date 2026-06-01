@@ -73,8 +73,32 @@ pkg/
   scan/                    `manul scan <URL>` — DOM scanner that generates a draft .hunt file;
                            `ScanPage` (basic, flat) and `ScanPageFull` (grouped by semantic region,
                            Shadow DOM aware) — mirrors ManulEngine's SCAN_JS / FULL_SCAN_JS
+  agent/                   Batteries-included embedding facade: agent.Session over
+                           runtime/cdp/scorer. Launch/Attach own Chrome; Read (zero-scan),
+                           ReadText (region text), Step/Run (compact StepOutcome + typed
+                           Reason + Near), Map (budgeted landmark scan). CLI `read` /
+                           `run-step --compact` are thin wrappers over this.
 examples/                  Reference .hunt files (mega.hunt, sampler.hunt, loops_demo.hunt)
 ```
+
+## Agent API (`pkg/agent`)
+
+For embedding ManulHeart in agent/LLM applications, `pkg/agent` is the stable,
+compact facade — consumers get browser control "out of the box" without
+spawning Chrome, speaking CDP, or assembling the runtime themselves:
+
+- `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
+- `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
+- `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot).
+- `Session.ReadText(selector)` — sanitized visible text of a region (or whole body).
+- `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing.
+- `Session.Map(MapBudget)` — landmark-grouped, deduped, ranked, capped page map.
+
+A `Session` owns one single-goroutine `Runtime`; it serializes its own calls
+but is not parallel — one Session per goroutine. The CLI (`manul read`,
+`manul run-step --compact`) routes through this same code path. The typed
+`explain.FailureReason` on `ExecutionResult` is the source the agent `Reason`
+mirrors.
 
 ## Concurrency contract (`0.0.0.5`+)
 

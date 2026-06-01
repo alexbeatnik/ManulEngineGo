@@ -105,3 +105,16 @@ DONE.
 		t.Fatalf("setup_result should be non-empty stringified map, got %q (ok=%v)", setup, ok)
 	}
 }
+
+// TestCmdRead_RequiresTargetOrSelector verifies the read subcommand rejects an
+// invocation with neither a target label nor a --selector before it tries to
+// touch a browser (so the check is browser-free and fast).
+func TestCmdRead_RequiresTargetOrSelector(t *testing.T) {
+	err := cmdRead([]string{"--cdp", "http://127.0.0.1:65535"})
+	if err == nil {
+		t.Fatal("expected an error when no target and no --selector given")
+	}
+	if !strings.Contains(err.Error(), "required") {
+		t.Errorf("error should explain the requirement, got: %v", err)
+	}
+}

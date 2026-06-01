@@ -121,6 +121,29 @@ Run a single step against a live browser:
 manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
 ```
 
+For agent/LLM drivers, `--compact` emits a small, machine-readable `StepOutcome`
+(`ok`, `action`, `reason`, `score`, and on failure/low-confidence the top
+candidates in `near`) instead of the full scorer breakdown — so the caller can
+branch on a typed `reason` and exit code rather than parse error strings:
+
+```bash
+manul run-step "Click 'Checkout'" --compact --cdp http://127.0.0.1:9222
+```
+
+Read one value off an already-open page without paying for a full scan
+(`manul read`). With a human label it resolves the element and returns its
+value; with `--selector` it returns the sanitized visible text of that CSS
+region:
+
+```bash
+manul read "Order total" --cdp http://127.0.0.1:9222
+manul read --selector "#answer" --cdp http://127.0.0.1:9222
+```
+
+These three (`read`, `run-step --compact`, and `run`) are the CLI face of the
+embeddable `pkg/agent` API (`agent.Session` — `Read` / `ReadText` / `Step` /
+`Run` / `Map`); the CLI and in-process consumers share one code path.
+
 Pipe a hunt script from stdin (`0.0.1.4`+) — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
 
 ```bash
