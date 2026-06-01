@@ -192,6 +192,221 @@ func (s *Session) Read(ctx context.Context, target string) (Value, error) {
 	return Value{Text: res.ActionValue, Found: res.ActionValue != ""}, nil
 }
 
+// Reason is the agent-facing, machine-readable classification of a step's
+// outcome. It mirrors explain.FailureReason but is owned by the agent API so
+// callers depend on a stable surface, not on internal runtime types.
+type Reason string
+
+const (
+	ReasonOK           Reason = "ok"
+	ReasonNotFound     Reason = "not_found"
+	ReasonAmbiguous    Reason = "ambiguous"
+	ReasonTimeout      Reason = "timeout"
+	ReasonVerifyFailed Reason = "verify_failed"
+	ReasonActionFailed Reason = "action_failed"
+)
+
+func reasonFrom(fr explain.FailureReason) Reason {
+	switch fr {
+	case explain.ReasonNotFound:
+		return ReasonNotFound
+	case explain.ReasonAmbiguous:
+		return ReasonAmbiguous
+	case explain.ReasonTimeout:
+		return ReasonTimeout
+	case explain.ReasonVerifyFailed:
+		return ReasonVerifyFailed
+	case explain.ReasonActionFailed:
+		return ReasonActionFailed
+	default:
+		return ReasonActionFailed
+	}
+}
+
+// Cand is a compact candidate: just the human-visible label and its score.
+// Surfaced on a failed/low-confidence Step so an agent can retarget ("you
+// almost matched 'Log In' at 0.18") without a follow-up page scan.
+type Cand struct {
+	Text  string  `json:"text"`
+	Score float64 `json:"score"`
+}
+
+// StepOutcome is the compact result of one Step — the agent-facing subset of
+// explain.ExecutionResult, with the full scorer breakdown deliberately dropped.
+type StepOutcome struct {
+	// OK is true when the step succeeded.
+	OK bool `json:"ok"`
+	// Action is the lowercase command kind (click, fill, navigate, …).
+	Action string `json:"action"`
+	// Value is the value used/extracted (fill value, extracted text, URL).
+	Value string `json:"value,omitempty"`
+	// URL is the page URL after the step ran.
+	URL string `json:"url,omitempty"`
+	// Reason classifies the outcome — ReasonOK on success.
+	Reason Reason `json:"reason"`
+	// Error is the raw error message when OK is false (for logs/diagnostics).
+	Error string `json:"error,omitempty"`
+	// Score is the winning candidate's score (0 when no target was resolved).
+	Score float64 `json:"score,omitempty"`
+	// Near lists the top candidates, populated only when the step failed to
+	// resolve a target or matched with low confidence. Empty otherwise.
+	Near []Cand `json:"near,omitempty"`
+}
+
+// lowConfidence is the score below which a "successful" target match is worth
+// surfacing candidates for. Picked to match OS-MANUL's empirically-tuned 0.35.
+const lowConfidence = 0.35
+
+// Step runs a single plain-English instruction (one DSL line, e.g.
+// "Click the 'Login' button") and returns a compact outcome. Failures carry a
+// machine-readable Reason and, for target-resolution problems, the top
+// candidates in Near — so an agent can correct course without scanning.
+func (s *Session) Step(ctx context.Context, instruction string) (StepOutcome, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return StepOutcome{}, fmt.Errorf("agent: session closed")
+	}
+
+	hunt, perr := dsl.Parse(strings.NewReader(instruction))
+	if perr != nil {
+		return StepOutcome{OK: false, Reason: ReasonActionFailed, Error: perr.Error()}, perr
+	}
+	if len(hunt.Commands) == 0 {
+		return StepOutcome{OK: true, Reason: ReasonOK}, nil
+	}
+
+	res, execErr := s.rt.RunCommand(ctx, hunt.Commands[0])
+	return outcomeFrom(res, execErr), execErr
+}
+
+// RunOutcome is the compact aggregate of running a whole hunt script.
+type RunOutcome struct {
+	OK         bool          `json:"ok"`
+	URL        string        `json:"url,omitempty"`
+	TotalSteps int           `json:"total_steps"`
+	Passed     int           `json:"passed"`
+	Failed     int           `json:"failed"`
+	Results    []StepOutcome `json:"results,omitempty"`
+	Duration   int64         `json:"duration_ms"`
+}
+
+// Run executes a full .hunt script (multiple lines, STEP blocks, loops, etc.)
+// against the session's page and returns a compact aggregate. Per-step compact
+// outcomes are in Steps_, in order. Use this for the "agent emits a whole
+// script" path; use Step for one-instruction-at-a-time control.
+func (s *Session) Run(ctx context.Context, huntScript string) (RunOutcome, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return RunOutcome{}, fmt.Errorf("agent: session closed")
+	}
+
+	hunt, perr := dsl.Parse(strings.NewReader(huntScript))
+	if perr != nil {
+		return RunOutcome{}, fmt.Errorf("agent: parse hunt: %w", perr)
+	}
+	hunt.SourcePath = "<agent>"
+	if err := dsl.ResolveImports(hunt); err != nil {
+		return RunOutcome{}, fmt.Errorf("agent: resolve imports: %w", err)
+	}
+	if err := hunt.Expand(); err != nil {
+		return RunOutcome{}, fmt.Errorf("agent: expand hunt: %w", err)
+	}
+
+	hr, runErr := s.rt.RunHunt(ctx, hunt)
+	out := RunOutcome{}
+	if hr != nil {
+		out.OK = hr.Success
+		out.TotalSteps = hr.TotalSteps
+		out.Passed = hr.Passed
+		out.Failed = hr.Failed
+		out.Duration = hr.TotalDurationMS
+		for _, r := range hr.Results {
+			out.Results = append(out.Results, outcomeFrom(r, errFromResult(r)))
+		}
+		out.URL = lastURL(hr.Results)
+	}
+	return out, runErr
+}
+
+// errFromResult reconstructs a non-nil error for a recorded failed step so
+// outcomeFrom classifies it correctly. The HuntResult stores the message, not
+// the error value.
+func errFromResult(r explain.ExecutionResult) error {
+	if r.Success {
+		return nil
+	}
+	if r.Error != "" {
+		return fmt.Errorf("%s", r.Error)
+	}
+	return fmt.Errorf("step failed")
+}
+
+func lastURL(results []explain.ExecutionResult) string {
+	for i := len(results) - 1; i >= 0; i-- {
+		if results[i].PageURL != "" {
+			return results[i].PageURL
+		}
+	}
+	return ""
+}
+
+// outcomeFrom collapses a full ExecutionResult into the compact StepOutcome,
+// attaching Near candidates on failure or low-confidence success.
+func outcomeFrom(res explain.ExecutionResult, execErr error) StepOutcome {
+	out := StepOutcome{
+		OK:     execErr == nil,
+		Action: res.ActionPerformed,
+		Value:  res.ActionValue,
+		URL:    res.PageURL,
+		Score:  res.WinnerScore,
+		Error:  res.Error,
+	}
+	if execErr == nil {
+		out.Reason = ReasonOK
+		// Surface candidates even on success when the match was weak, so the
+		// agent can decide whether the click really landed where intended.
+		if res.WinnerScore > 0 && res.WinnerScore < lowConfidence {
+			out.Near = topCandidates(res.RankedCandidates, 3)
+		}
+		return out
+	}
+	out.Reason = reasonFrom(res.FailureReason)
+	out.Near = topCandidates(res.RankedCandidates, 3)
+	return out
+}
+
+// topCandidates trims the ranked list to the n most descriptive labels.
+func topCandidates(cands []explain.Candidate, n int) []Cand {
+	out := make([]Cand, 0, n)
+	for _, c := range cands {
+		if len(out) >= n {
+			break
+		}
+		label := candidateLabel(c)
+		if label == "" {
+			continue
+		}
+		out = append(out, Cand{Text: label, Score: c.Score.Total})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// candidateLabel picks the most human-meaningful string for a candidate, in
+// the order a person would name the element.
+func candidateLabel(c explain.Candidate) string {
+	for _, s := range []string{c.VisibleText, c.AriaLabel, c.Placeholder} {
+		if t := strings.TrimSpace(s); t != "" {
+			return t
+		}
+	}
+	return ""
+}
+
 // isNotFound reports whether an EXTRACT result represents "target resolved to
 // nothing" rather than a real execution failure (probe crash, page gone, etc).
 // CmdExtract signals empty/missing targets via a sentinel error message; we

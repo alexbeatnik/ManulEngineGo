@@ -632,6 +632,7 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 
 		if len(ranked) == 0 {
 			err = fmt.Errorf("target not found: %q", targetPath)
+			res.FailureReason = explain.ReasonNotFound
 			break
 		}
 
@@ -642,6 +643,10 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 				runnerUp = ranked[1].Explain.Score.Total
 			}
 			err = fmt.Errorf("target resolution too ambiguous (confidence %.3f, runner-up %.3f)", best.Explain.Score.Total, runnerUp)
+			res.FailureReason = explain.ReasonAmbiguous
+			// Attach the top candidates so callers can surface "you almost
+			// matched X (0.18)" without a follow-up scan.
+			appendRankedCandidates(&res, ranked, 5)
 			break
 		}
 		appendRankedCandidates(&res, ranked, 5)
@@ -1202,10 +1207,42 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 
 	if err != nil {
 		res.Error = err.Error()
+		// Classify the failure for machine-readable consumption. Sites that
+		// know the precise cause (target not found / ambiguous) set
+		// res.FailureReason directly above; only fill in the rest here.
+		if res.FailureReason == explain.ReasonNone {
+			res.FailureReason = classifyFailure(ctx, cmd, err)
+		}
 	} else {
 		res.Success = true
 	}
 	return res, err
+}
+
+// classifyFailure derives a machine-readable FailureReason from a failed
+// command's error and context, for callers that branch on failure kind
+// without parsing error strings. Used only as a fallback — the targeting
+// pipeline sets the precise not_found/ambiguous reasons at their source.
+func classifyFailure(ctx context.Context, cmd dsl.Command, err error) explain.FailureReason {
+	if ctx.Err() != nil {
+		return explain.ReasonTimeout
+	}
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "too ambiguous"):
+		return explain.ReasonAmbiguous
+	case strings.Contains(msg, "not found"):
+		return explain.ReasonNotFound
+	case strings.Contains(msg, "verification failed"):
+		return explain.ReasonVerifyFailed
+	case strings.Contains(msg, "context deadline") || strings.Contains(msg, "timeout"):
+		return explain.ReasonTimeout
+	}
+	// Commands that resolved a target but failed during the action itself.
+	if cmd.Type == dsl.CmdVerify || cmd.Type == dsl.CmdVerifyField {
+		return explain.ReasonVerifyFailed
+	}
+	return explain.ReasonActionFailed
 }
 
 func (rt *Runtime) evaluateCondition(ctx context.Context, cond string) (bool, error) {

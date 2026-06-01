@@ -102,6 +102,30 @@ type Candidate struct {
 	Chosen bool `json:"chosen"`
 }
 
+// FailureReason is a machine-readable classification of why a command failed.
+// It lets consumers (the agent API, reports) branch on the failure kind
+// without parsing human-readable error strings, which change between versions.
+// Empty on success.
+type FailureReason string
+
+const (
+	// ReasonNone is the zero value — set on success or when no specific
+	// classification applies.
+	ReasonNone FailureReason = ""
+	// ReasonNotFound — no candidate matched the target at all.
+	ReasonNotFound FailureReason = "not_found"
+	// ReasonAmbiguous — the top candidates were too close to confidently
+	// pick one (the scorer refused rather than guess).
+	ReasonAmbiguous FailureReason = "ambiguous"
+	// ReasonTimeout — a wait/verify deadline elapsed, or the context expired.
+	ReasonTimeout FailureReason = "timeout"
+	// ReasonVerifyFailed — a VERIFY assertion did not hold.
+	ReasonVerifyFailed FailureReason = "verify_failed"
+	// ReasonActionFailed — the element resolved but the action itself failed
+	// (e.g. the browser rejected the input, the page navigated away).
+	ReasonActionFailed FailureReason = "action_failed"
+)
+
 // ExecutionResult is the complete structured result of executing one DSL command.
 type ExecutionResult struct {
 	// Step is the original DSL command text, as written in the .hunt file.
@@ -136,6 +160,9 @@ type ExecutionResult struct {
 	Success bool `json:"success"`
 	// Error is the error message if Success is false.
 	Error string `json:"error,omitempty"`
+	// FailureReason is the machine-readable failure classification when
+	// Success is false (empty on success). See FailureReason constants.
+	FailureReason FailureReason `json:"failure_reason,omitempty"`
 	// DurationMS is the wall-clock time (milliseconds) taken to execute this command.
 	DurationMS int64 `json:"duration_ms"`
 	// Duration is the original time.Duration (not serialized).
