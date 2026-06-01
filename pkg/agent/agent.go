@@ -23,6 +23,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/alexbeatnik/ManulHeart/pkg/config"
 	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
 	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/heuristics"
 	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
 	"github.com/alexbeatnik/ManulHeart/pkg/scan"
 	"github.com/alexbeatnik/ManulHeart/pkg/utils"
@@ -192,6 +194,68 @@ func (s *Session) Read(ctx context.Context, target string) (Value, error) {
 		return Value{}, fmt.Errorf("agent: read %q: %w", target, err)
 	}
 	return Value{Text: res.ActionValue, Found: res.ActionValue != ""}, nil
+}
+
+// ReadText returns the case-preserved, shadow-DOM-aware visible text of the
+// page, sanitized of markup noise (base64 blobs, data-* attributes, SVG path
+// data) so it's fit to hand to an LLM. Pass a CSS selector to scope extraction
+// to one region; pass "" for the whole document body.
+//
+// This complements Read: Read resolves ONE element by a human label and
+// returns its value; ReadText dumps a whole region's prose — the right tool
+// when an agent needs to read content the semantic scan can't see (dynamic
+// answer panels, article bodies). It is a single probe round-trip — no full
+// snapshot, no scan.
+func (s *Session) ReadText(ctx context.Context, selector string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return "", fmt.Errorf("agent: session closed")
+	}
+
+	raw, err := s.page.CallProbe(ctx, heuristics.BuildPageTextProbe(), selector)
+	if err != nil {
+		return "", fmt.Errorf("agent: read text: %w", err)
+	}
+	// CallProbe returns the JSON-encoded string value; unquote it.
+	var text string
+	if jsonErr := json.Unmarshal(raw, &text); jsonErr != nil {
+		// Some backends hand back the bare string; use it as-is.
+		text = string(raw)
+	}
+	return sanitizeText(text), nil
+}
+
+// sanitizeText strips markup noise from page text so an LLM isn't drowned in
+// base64 blobs, data-* attribute dumps, or SVG path data. Mirrors the cleanup
+// consumers (e.g. OS-MANUL) previously hand-rolled around raw CDP text.
+func sanitizeText(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	var cleaned []string
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Base64 / data URIs.
+		if strings.HasPrefix(line, "data:image/") || strings.HasPrefix(line, "data:text/") ||
+			(len(line) > 80 && !strings.Contains(line, " ") && !strings.Contains(line, "-")) {
+			continue
+		}
+		// HTML attribute / framework noise.
+		if strings.HasPrefix(line, "data-") || strings.HasPrefix(line, "jsaction=") ||
+			strings.HasPrefix(line, "jscontroller=") || strings.HasPrefix(line, "jsuid=") {
+			continue
+		}
+		// SVG path data (long M…Z command strings).
+		if strings.Contains(line, "M") && strings.Contains(line, "Z") && len(line) > 100 {
+			continue
+		}
+		cleaned = append(cleaned, line)
+	}
+	return strings.Join(cleaned, "\n")
 }
 
 // Reason is the agent-facing, machine-readable classification of a step's

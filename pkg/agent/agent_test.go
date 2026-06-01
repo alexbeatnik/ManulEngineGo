@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -269,6 +270,79 @@ func TestMap_OnClosedSession(t *testing.T) {
 	_ = sess.Close()
 	if _, err := sess.Map(context.Background(), MapBudget{}); err == nil {
 		t.Errorf("expected error mapping a closed session")
+	}
+}
+
+// textMockPage overrides CallProbe to return canned page text, so ReadText
+// can be exercised without a browser. The selector argument is recorded.
+type textMockPage struct {
+	*runtime.MockPage
+	text     string
+	gotArg   any
+	probeFn  string
+}
+
+func (p *textMockPage) CallProbe(ctx context.Context, fn string, arg any) ([]byte, error) {
+	p.probeFn = fn
+	p.gotArg = arg
+	b, _ := json.Marshal(p.text)
+	return b, nil
+}
+
+func newTextSession(text string) (*Session, *textMockPage) {
+	page := &textMockPage{MockPage: &runtime.MockPage{URL: "https://example.com"}, text: text}
+	s := &Session{
+		rt:   runtime.New(config.Default(), page, utils.NewLogger(nil)),
+		page: page,
+	}
+	return s, page
+}
+
+func TestReadText_ReturnsCasePreservedText(t *testing.T) {
+	sess, _ := newTextSession("The Weather in Kyiv is 18°C and Sunny")
+	got, err := sess.ReadText(context.Background(), "")
+	if err != nil {
+		t.Fatalf("ReadText failed: %v", err)
+	}
+	if got != "The Weather in Kyiv is 18°C and Sunny" {
+		t.Errorf("text not preserved verbatim: %q", got)
+	}
+}
+
+func TestReadText_Sanitizes(t *testing.T) {
+	raw := "Real answer line\n" +
+		"data:image/png;base64,AAAABBBBCCCC\n" +
+		"data-ved=somethinglong\n" +
+		"   \n" +
+		"Second real line"
+	sess, _ := newTextSession(raw)
+	got, err := sess.ReadText(context.Background(), "")
+	if err != nil {
+		t.Fatalf("ReadText failed: %v", err)
+	}
+	if strings.Contains(got, "base64") || strings.Contains(got, "data-ved") {
+		t.Errorf("noise survived sanitization: %q", got)
+	}
+	if !strings.Contains(got, "Real answer line") || !strings.Contains(got, "Second real line") {
+		t.Errorf("real content dropped: %q", got)
+	}
+}
+
+func TestReadText_PassesSelector(t *testing.T) {
+	sess, page := newTextSession("scoped")
+	if _, err := sess.ReadText(context.Background(), "#answer"); err != nil {
+		t.Fatalf("ReadText failed: %v", err)
+	}
+	if page.gotArg != "#answer" {
+		t.Errorf("selector not passed to probe: got %v", page.gotArg)
+	}
+}
+
+func TestReadText_OnClosedSession(t *testing.T) {
+	sess, _ := newTextSession("x")
+	_ = sess.Close()
+	if _, err := sess.ReadText(context.Background(), ""); err == nil {
+		t.Errorf("expected error on closed session")
 	}
 }
 

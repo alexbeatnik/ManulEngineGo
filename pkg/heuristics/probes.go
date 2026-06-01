@@ -40,6 +40,12 @@ var xpathResolveProbeJS string
 //go:embed extract_data.js
 var extractDataProbeJS string
 
+// pageTextProbeJS reads the case-preserved, shadow-DOM-aware visible text of
+// the page (or a selector-scoped region) for an agent/LLM to consume.
+//
+//go:embed page_text_probe.js
+var pageTextProbeJS string
+
 // BuildSnapshotProbe returns the snapshot probe JS string.
 // This is the primary probe used by every targeting command.
 func BuildSnapshotProbe() string {
@@ -62,6 +68,13 @@ func BuildXPathProbe() string {
 // Used by EXTRACT commands to pull values from tables and text nodes.
 func BuildExtractProbe() string {
 	return extractDataProbeJS
+}
+
+// BuildPageTextProbe returns the page-text probe JS string. It takes an
+// optional CSS selector argument (empty → whole body) and returns the
+// case-preserved visible text, for agent/LLM consumption rather than matching.
+func BuildPageTextProbe() string {
+	return pageTextProbeJS
 }
 
 // BuildProbeScript returns the snapshot probe JS for backward compatibility.
