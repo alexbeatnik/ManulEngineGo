@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/manulengineer/manulheart/pkg/cdp"
-	"github.com/manulengineer/manulheart/pkg/heuristics"
+	"github.com/alexbeatnik/ManulHeart/pkg/cdp"
+	"github.com/alexbeatnik/ManulHeart/pkg/heuristics"
 )
 
 func main() {

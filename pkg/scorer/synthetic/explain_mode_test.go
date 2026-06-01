@@ -18,11 +18,11 @@ package synthetic
 // ─────────────────────────────────────────────────────────────────────────────
 
 import (
-	"github.com/manulengineer/manulheart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
 	"math"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════

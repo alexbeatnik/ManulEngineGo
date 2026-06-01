@@ -41,7 +41,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/manulengineer/manulheart/pkg/runtime"
+    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
 )
 
 func init() {
@@ -111,8 +111,8 @@ package main
 import (
     "context"
 
-    "github.com/manulengineer/manulheart/pkg/browser"
-    "github.com/manulengineer/manulheart/pkg/runtime"
+    "github.com/alexbeatnik/ManulHeart/pkg/browser"
+    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
 )
 
 func init() {
@@ -261,7 +261,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/manulengineer/manulheart/pkg/runtime"
+    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
 )
 
 func init() {

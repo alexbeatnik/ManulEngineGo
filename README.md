@@ -264,10 +264,10 @@ The `manul` CLI runs single-threaded by default. For true parallelism, embed the
 ```go
 import (
     "context"
-    "github.com/manulengineer/manulheart/pkg/config"
-    "github.com/manulengineer/manulheart/pkg/dsl"
-    "github.com/manulengineer/manulheart/pkg/report"
-    "github.com/manulengineer/manulheart/pkg/worker"
+    "github.com/alexbeatnik/ManulHeart/pkg/config"
+    "github.com/alexbeatnik/ManulHeart/pkg/dsl"
+    "github.com/alexbeatnik/ManulHeart/pkg/report"
+    "github.com/alexbeatnik/ManulHeart/pkg/worker"
 )
 
 func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {

@@ -21,10 +21,10 @@ package synthetic
 // ─────────────────────────────────────────────────────────────────────────────
 
 import (
-	"github.com/manulengineer/manulheart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
 )
 
 // ── Test 1: data-qa beats text ──────────────────────────────────────────────

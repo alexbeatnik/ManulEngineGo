@@ -3,8 +3,8 @@ package synthetic
 import (
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
 )
 
 // ── Helpers for Synthetic Tests ──────────────────────────────────────────────

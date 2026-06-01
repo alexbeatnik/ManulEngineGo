@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/browser"
+	"github.com/alexbeatnik/ManulHeart/pkg/browser"
 )
 
 // SCAN_JS is the JavaScript payload executed in the browser to discover

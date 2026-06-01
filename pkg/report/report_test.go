@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/explain"
 )
 
 // ---- sanitizeFilename -------------------------------------------------------

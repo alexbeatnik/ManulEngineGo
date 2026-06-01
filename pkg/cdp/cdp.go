@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/core"
+	"github.com/alexbeatnik/ManulHeart/pkg/core"
 )
 
 // ── Types ──────────────────────────────────────────────────────────────────────

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/runtime"
-	"github.com/manulengineer/manulheart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
 )
 
 // newTestSession wires a Session around a runtime.MockPage so Read can be

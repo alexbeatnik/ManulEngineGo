@@ -16,11 +16,11 @@ package synthetic
 // ─────────────────────────────────────────────────────────────────────────────
 
 import (
-	"github.com/manulengineer/manulheart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
 	"math"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
 )
 
 func makeElWithRect(id string, tag string, text string, top, left, bottom, right float64, xpath string) dom.ElementSnapshot {

@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/browser"
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/dsl"
-	"github.com/manulengineer/manulheart/pkg/report"
-	"github.com/manulengineer/manulheart/pkg/runtime"
-	"github.com/manulengineer/manulheart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulHeart/pkg/report"
+	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
 )
 
 var weekdays = map[string]int{

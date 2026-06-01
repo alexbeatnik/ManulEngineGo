@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/dsl"
-	"github.com/manulengineer/manulheart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
 )
 
 func TestRuntime_ConditionalScenario(t *testing.T) {

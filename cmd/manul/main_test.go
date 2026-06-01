@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/browser"
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/dsl"
-	"github.com/manulengineer/manulheart/pkg/runtime"
-	"github.com/manulengineer/manulheart/pkg/utils"
-	"github.com/manulengineer/manulheart/pkg/worker"
+	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/worker"
 )
 
 // TestCustomControlAndCallGo demonstrates the full SDET workflow:

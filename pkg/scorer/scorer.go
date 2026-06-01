@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/explain"
 )
 
 // ── Public types ──────────────────────────────────────────────────────────────

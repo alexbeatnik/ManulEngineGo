@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/explain"
 )
 
 // RunHistoryEntry is one line of reports/run_history.json per the extension contract.

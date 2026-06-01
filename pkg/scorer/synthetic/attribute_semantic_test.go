@@ -15,10 +15,10 @@ package synthetic
 // ─────────────────────────────────────────────────────────────────────────────
 
 import (
-	"github.com/manulengineer/manulheart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
 )
 
 // rankByID finds the rank position (0-indexed) of the element with the given ID.

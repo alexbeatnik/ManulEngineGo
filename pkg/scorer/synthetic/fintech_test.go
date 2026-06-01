@@ -13,7 +13,7 @@ package synthetic
 import (
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
 )
 
 func fintechDOM() []dom.ElementSnapshot {

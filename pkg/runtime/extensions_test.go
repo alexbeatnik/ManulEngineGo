@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/manulengineer/manulheart/pkg/browser"
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/dsl"
-	"github.com/manulengineer/manulheart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
 )
 
 func TestCustomControlRegistryLookupIsCaseInsensitive(t *testing.T) {

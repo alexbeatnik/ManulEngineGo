@@ -13,16 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/browser"
-	"github.com/manulengineer/manulheart/pkg/config"
-	"github.com/manulengineer/manulheart/pkg/core"
-	"github.com/manulengineer/manulheart/pkg/dom"
-	"github.com/manulengineer/manulheart/pkg/dsl"
-	"github.com/manulengineer/manulheart/pkg/explain"
-	"github.com/manulengineer/manulheart/pkg/heuristics"
-	"github.com/manulengineer/manulheart/pkg/pages"
-	"github.com/manulengineer/manulheart/pkg/scorer"
-	"github.com/manulengineer/manulheart/pkg/utils"
+	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulHeart/pkg/config"
+	"github.com/alexbeatnik/ManulHeart/pkg/core"
+	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/heuristics"
+	"github.com/alexbeatnik/ManulHeart/pkg/pages"
+	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
+	"github.com/alexbeatnik/ManulHeart/pkg/utils"
 )
 
 func min(a, b int) int {

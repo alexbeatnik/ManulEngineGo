@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/manulengineer/manulheart/pkg/explain"
+	"github.com/alexbeatnik/ManulHeart/pkg/explain"
 )
 
 // reportSeq is a monotonic counter appended to every generated filename so
