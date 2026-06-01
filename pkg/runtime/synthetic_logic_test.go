@@ -7,6 +7,7 @@ import (
 	"github.com/manulengineer/manulheart/pkg/config"
 	"github.com/manulengineer/manulheart/pkg/dom"
 	"github.com/manulengineer/manulheart/pkg/dsl"
+	"github.com/manulengineer/manulheart/pkg/explain"
 	"github.com/manulengineer/manulheart/pkg/utils"
 )
 
@@ -146,5 +147,49 @@ func TestRuntime_Loops(t *testing.T) {
 	_, err = rt.RunHunt(ctx, huntNested)
 	if err != nil {
 		t.Fatalf("Nested loop hunt failed: %v", err)
+	}
+}
+
+// TestRuntime_LoopBodyStepsRecorded guards against loop/IF bodies executing
+// their steps without recording them in the HuntResult — which previously
+// dropped every body step from reports and the onStep callback.
+func TestRuntime_LoopBodyStepsRecorded(t *testing.T) {
+	mock := &MockPage{}
+	cfg := config.Config{}
+	logger := utils.NewLogger(nil)
+	rt := New(cfg, mock, logger)
+	ctx := context.Background()
+
+	var streamed int
+	rt.SetOnStep(func(explain.ExecutionResult) { streamed++ })
+
+	hunt := &dsl.Hunt{
+		Commands: []dsl.Command{
+			{
+				Type:        dsl.CmdRepeat,
+				RepeatCount: 3,
+				RepeatVar:   "i",
+				Body: []dsl.Command{
+					{Type: dsl.CmdPrint, PrintText: "Iteration {i}"},
+				},
+			},
+		},
+	}
+
+	res, err := rt.RunHunt(ctx, hunt)
+	if err != nil {
+		t.Fatalf("hunt failed: %v", err)
+	}
+
+	// 3 body PRINTs + 1 REPEAT container step.
+	const wantSteps = 4
+	if len(res.Results) != wantSteps {
+		t.Errorf("expected %d recorded results, got %d", wantSteps, len(res.Results))
+	}
+	if res.TotalSteps != wantSteps {
+		t.Errorf("expected TotalSteps=%d, got %d", wantSteps, res.TotalSteps)
+	}
+	if streamed != wantSteps {
+		t.Errorf("expected onStep to fire %d times, got %d", wantSteps, streamed)
 	}
 }

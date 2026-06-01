@@ -872,8 +872,10 @@ func parseCommandLine(line string) Command {
 		// Strip optional "SECONDS" suffix.
 		rest = strings.TrimSuffix(strings.TrimSuffix(strings.ToUpper(rest), " SECONDS"), " SECOND")
 		rest = strings.ToLower(rest)
-		if n, err := strconv.ParseFloat(strings.Fields(rest)[0], 64); err == nil {
-			cmd.WaitSeconds = n
+		if waitFields := strings.Fields(rest); len(waitFields) > 0 {
+			if n, err := strconv.ParseFloat(waitFields[0], 64); err == nil {
+				cmd.WaitSeconds = n
+			}
 		}
 
 	// ── HOVER ─────────────────────────────────────────────────────────────────

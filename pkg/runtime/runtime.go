@@ -80,6 +80,12 @@ type Runtime struct {
 	// SetOnStep. Intended for streaming consumers (e.g. the CLI's -jsonl
 	// mode) that need per-step progress before the full HuntResult.
 	onStep func(explain.ExecutionResult)
+
+	// activeHuntRes is the HuntResult of the in-flight RunHunt call. Loop
+	// (REPEAT/WHILE/FOR EACH) and IF bodies route through runCommands with
+	// this so their steps are recorded in the report and surfaced via
+	// onStep — not silently dropped. Nil outside RunHunt.
+	activeHuntRes *explain.HuntResult
 }
 
 type mockRule struct {
@@ -157,6 +163,10 @@ func (rt *Runtime) RunHunt(ctx context.Context, hunt *dsl.Hunt, rowVars ...map[s
 		Title:    hunt.Title,
 		Context:  hunt.Context,
 	}
+	// Expose the result so loop/IF bodies (executed inside executeCommand)
+	// can record their steps through runCommands. Cleared on return.
+	rt.activeHuntRes = result
+	defer func() { rt.activeHuntRes = nil }()
 
 	start := time.Now()
 	passed, failed := 0, 0
@@ -189,10 +199,21 @@ func (rt *Runtime) RunHunt(ctx context.Context, hunt *dsl.Hunt, rowVars ...map[s
 		}
 		result.TotalDuration = time.Since(start)
 		result.TotalDurationMS = result.TotalDuration.Milliseconds()
-		result.TotalSteps = passed + failed
-		result.Passed = passed
-		result.Failed = failed
-		result.Success = failed == 0
+		// Derive the summary from the recorded results so that steps nested
+		// inside loop/IF bodies (which runCommands appends but whose counters
+		// are not threaded back to the outer pass/fail tally) are included.
+		resPassed, resFailed := 0, 0
+		for _, r := range result.Results {
+			if r.Success {
+				resPassed++
+			} else {
+				resFailed++
+			}
+		}
+		result.TotalSteps = resPassed + resFailed
+		result.Passed = resPassed
+		result.Failed = resFailed
+		result.Success = resFailed == 0
 	}()
 
 	if firstErr != nil {
@@ -1109,7 +1130,7 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 			}
 		}
 		if err == nil && len(bodyToRun) > 0 {
-			_, _, err = rt.runCommands(ctx, bodyToRun, nil, 0)
+			_, _, err = rt.runCommands(ctx, bodyToRun, rt.activeHuntRes, 0)
 		}
 
 	case dsl.CmdRepeat:
@@ -1118,7 +1139,7 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 			if cmd.RepeatVar != "" {
 				rt.vars.Set(cmd.RepeatVar, fmt.Sprintf("%d", i), LevelRow)
 			}
-			_, _, err = rt.runCommands(ctx, cmd.Body, nil, 0)
+			_, _, err = rt.runCommands(ctx, cmd.Body, rt.activeHuntRes, 0)
 			if err != nil {
 				break
 			}
@@ -1135,7 +1156,7 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 			if !matched {
 				break
 			}
-			_, _, err = rt.runCommands(ctx, cmd.Body, nil, 0)
+			_, _, err = rt.runCommands(ctx, cmd.Body, rt.activeHuntRes, 0)
 			if err != nil {
 				break
 			}
@@ -1154,7 +1175,7 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 				continue
 			}
 			rt.vars.Set(cmd.ForEachVar, val, LevelRow)
-			_, _, err = rt.runCommands(ctx, cmd.Body, nil, 0)
+			_, _, err = rt.runCommands(ctx, cmd.Body, rt.activeHuntRes, 0)
 			if err != nil {
 				break
 			}
@@ -1238,19 +1259,19 @@ func (rt *Runtime) evaluateCondition(ctx context.Context, cond string) (bool, er
 		// Resolve variables first
 		resolved := rt.resolveVariables(cond)
 		if strings.Contains(resolved, " == ") {
-			parts := strings.Split(resolved, " == ")
+			parts := strings.SplitN(resolved, " == ", 2)
 			v1 := strings.TrimSpace(parts[0])
 			v2 := strings.Trim(strings.TrimSpace(parts[1]), "'\"")
 			return v1 == v2, nil
 		}
 		if strings.Contains(resolved, " != ") {
-			parts := strings.Split(resolved, " != ")
+			parts := strings.SplitN(resolved, " != ", 2)
 			v1 := strings.TrimSpace(parts[0])
 			v2 := strings.Trim(strings.TrimSpace(parts[1]), "'\"")
 			return v1 != v2, nil
 		}
 		if strings.Contains(resolved, " contains ") {
-			parts := strings.Split(resolved, " contains ")
+			parts := strings.SplitN(resolved, " contains ", 2)
 			v1 := strings.TrimSpace(parts[0])
 			v2 := strings.Trim(strings.TrimSpace(parts[1]), "'\"")
 			return strings.Contains(v1, v2), nil
