@@ -49,6 +49,11 @@ import (
 	"github.com/alexbeatnik/ManulHeart/pkg/worker"
 )
 
+// version is the single source of truth for the engine version. It tracks the
+// git module tag (semver vX.Y.Z) so `manul --version`, the README, and
+// `go get ...@<tag>` all agree. Bump this together with the tag.
+const version = "v0.0.4"
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -58,7 +63,7 @@ func main() {
 	firstArg := os.Args[1]
 
 	if firstArg == "--version" || firstArg == "-version" || firstArg == "-v" {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.2.0)\n")
+		fmt.Printf("manul %s\n", version)
 		os.Stdout.Sync()
 		return
 	}
@@ -187,7 +192,7 @@ func cmdRun(args []string) error {
 	}
 
 	if *showVersion {
-		fmt.Printf("manul-heart v0.0.9.31 (core 0.0.2.0)\n")
+		fmt.Printf("manul %s\n", version)
 		os.Stdout.Sync()
 		return nil
 	}

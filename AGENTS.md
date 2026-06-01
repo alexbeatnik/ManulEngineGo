@@ -37,12 +37,19 @@ make install
 
 # Run a single step against a running Chrome
 ./manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
+./manul run-step "Click 'Checkout'" --compact --cdp http://127.0.0.1:9222  # agent StepOutcome
+
+# Read one value off an open page (zero-scan); --selector for region text
+./manul read "Order total" --cdp http://127.0.0.1:9222
 ```
 
 ## Architecture
 
 ```
 cmd/manul/          CLI entry point → produces `manul` binary
+pkg/agent/          Embedding facade: agent.Session over runtime/cdp/scorer.
+                    Launch/Attach (owns Chrome), Read/ReadText/Step/Run/Map.
+                    CLI `read` + `run-step --compact` are thin wrappers over it.
 pkg/dsl/            .hunt parser → Hunt{Commands[]Command}; no browser access
 pkg/runtime/        Targeting pipeline + hunt execution (SINGLE-GOROUTINE per worker)
 pkg/heuristics/     In-page JS probes (SnapshotProbe, VisibleTextProbe, ExtractDataProbe)
@@ -113,6 +120,36 @@ report.GenerateIndex(summaries, "reports")  // aggregate index.html
 For quick fan-out without `FailFast` or custom `ChromeOptions`, use the convenience
 wrapper: `results, err := worker.RunHuntsInParallel(ctx, cfg, hunts, n, logger)` —
 returns per-hunt results in input order.
+
+### Agent API (`pkg/agent`)
+
+`pkg/agent` is the batteries-included embedding facade for agent/LLM consumers:
+ManulHeart owns the whole browser lifecycle and the caller gets a small, compact API.
+
+```go
+sess, _ := agent.Launch(ctx, agent.Options{Headless: true}) // spawns & owns Chrome
+// or agent.Attach(ctx, cdpURL, urlSubstr, agent.Options{}) — connect to a running Chrome
+defer sess.Close()
+out, _ := sess.Step(ctx, "Click the 'Login' button") // StepOutcome{OK,Action,Reason,Score,Near}
+v, _   := sess.Read(ctx, "Order total")              // zero-scan targeted text (one probe)
+txt, _ := sess.ReadText(ctx, "#answer")              // sanitized region/page text
+pm, _  := sess.Map(ctx, agent.MapBudget{MaxPerGroup: 8})
+res, _ := sess.Run(ctx, huntScript)                  // whole .hunt, compact aggregate
+```
+
+- Built on `runtime.Runtime.RunCommand` (full `explain.ExecutionResult`) — NOT `RunStep`.
+- Compact results drop the scorer breakdown. Failures carry a typed `Reason`
+  (`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) mirroring
+  `explain.FailureReason` (set at the targeting sites in `pkg/runtime`, fallback
+  `classifyFailure` for the rest). `Near` (top-3 `{Text,Score}`) is populated on
+  failure AND on low-confidence success (score < 0.35) so a caller retargets
+  without a follow-up scan — never by parsing error strings.
+- `Read` uses `BuildExtractProbe` (targeted, one round-trip); `ReadText` uses
+  the case-preserved `BuildPageTextProbe` + `sanitizeText`. Don't reuse
+  `BuildVisibleTextProbe` for reading — it lowercases/flattens for matching.
+- A `Session` owns ONE single-goroutine `Runtime` (it serializes its own calls
+  with a mutex but is not parallel). One Session per goroutine, or use `pkg/worker`.
+- The CLI's `read` and `run-step --compact` route through this same code path.
 
 ### Configuration Priority Chain (`0.0.1.0`+)
 

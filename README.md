@@ -8,7 +8,7 @@ ManulHeart executes `.hunt` files using plain-English commands, DOM intelligence
 
 **No Playwright. No Node.js. No CSS/XPath selectors as a public API. No LLM in the loop.**
 
-Single dependency: `gorilla/websocket`. Pure Go. Single static binary. ~476 tests. True goroutine-level parallelism.
+Single dependency: `gorilla/websocket`. Pure Go. Single static binary. True goroutine-level parallelism. Embeddable in-process via the `pkg/agent` API.
 
 ---
 
@@ -144,7 +144,7 @@ These three (`read`, `run-step --compact`, and `run`) are the CLI face of the
 embeddable `pkg/agent` API (`agent.Session` — `Read` / `ReadText` / `Step` /
 `Run` / `Map`); the CLI and in-process consumers share one code path.
 
-Pipe a hunt script from stdin (`0.0.1.4`+) — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
+Pipe a hunt script from stdin — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
 
 ```bash
 cat examples/saucedemo.hunt | manul -
@@ -208,6 +208,7 @@ The same `.hunt` file against the same page produces the same resolution path ev
 | **HTML reports** | Per-hunt styled reports + aggregate `index.html` for parallel runs. |
 | **Page scanner** | `manul scan <URL>` generates a draft `.hunt`; `--full` groups elements by semantic region (form, nav, main, shadow) including Shadow DOM. |
 | **Stdin hunts** | `manul -` reads a hunt script from stdin and always emits a partial result on failure so dispatchers can read per-step errors. |
+| **Embeddable agent API** | `pkg/agent.Session` owns Chrome and exposes compact, agent-friendly calls: `Read` (zero-scan), `ReadText`, `Step`/`Run` (typed `Reason` + `Near` candidates), `Map` (budgeted scan). CLI `read` / `run-step --compact` are thin wrappers over it. |
 | **Zero external deps** | Only `gorilla/websocket`. No Playwright, no Node.js, no Python. |
 
 ---
@@ -256,6 +257,8 @@ CLI Flags  >  MANUL_* env vars  >  manul_engine_configuration.json  >  config.De
 
 ```
 cmd/manul           CLI entry point → produces `manul` binary
+pkg/agent           Embedding facade: agent.Session over runtime/cdp/scorer —
+                    Launch/Attach (owns Chrome), Read/ReadText/Step/Run/Map
 pkg/cdp             Low-level CDP WebSocket transport and domain wrappers
 pkg/browser         Abstract browser/page interfaces + CDP backend + Chrome lifecycle
 pkg/runtime         Targeting pipeline: probe → filter → score → resolve;
@@ -271,6 +274,7 @@ pkg/config          Runtime configuration (20 fields)
 pkg/core            Shared enums (e.g. ScrollStrategy)
 pkg/pages           Page-name registry: URL → human-readable label, lean/wrapped JSON,
                     auto-populate, longest-prefix site matching
+pkg/scan            DOM scanner → draft .hunt; ScanPage (flat) + ScanPageFull (grouped)
 pkg/utils           Semantic logging (Block/Action/Detail), ANSI stripping, error types
 examples/           Sample .hunt files
 docs/               Documentation
@@ -279,6 +283,34 @@ docs/               Documentation
 See [docs/overview.md](docs/overview.md) for the deep-dive architecture walkthrough.
 
 ---
+
+## Embedding (Agent API)
+
+To drive a browser from a Go program — an assistant, an agent, a custom tool —
+embed `pkg/agent`. ManulHeart owns the entire browser lifecycle; the consumer
+just calls a small, compact API and never touches CDP or the runtime directly:
+
+```go
+import "github.com/alexbeatnik/ManulHeart/pkg/agent"
+
+sess, err := agent.Launch(ctx, agent.Options{Headless: true}) // ManulHeart spawns & owns Chrome
+// or: agent.Attach(ctx, "http://127.0.0.1:9222", "", agent.Options{}) to use a running Chrome
+defer sess.Close()
+
+out, _ := sess.Step(ctx, "Click the 'Login' button")  // compact: ok, reason, score, near[]
+total, _ := sess.Read(ctx, "Order total")             // zero-scan targeted text
+text, _ := sess.ReadText(ctx, "#answer")              // sanitized region/page text
+pm, _ := sess.Map(ctx, agent.MapBudget{MaxPerGroup: 8}) // budgeted landmark map
+res, _ := sess.Run(ctx, huntScript)                   // whole .hunt, compact aggregate
+```
+
+Failures carry a machine-readable `Reason` (`not_found` / `ambiguous` /
+`timeout` / `verify_failed` / `action_failed`) and, for resolution problems,
+the top candidates in `Near` — so a caller branches on a typed reason instead
+of parsing error strings, and corrects a weak match without a follow-up scan.
+A `Session` owns one single-goroutine `Runtime`; use one Session per goroutine
+for parallel work (or `pkg/worker` below). The CLI's `read` and
+`run-step --compact` are thin wrappers over this same code path.
 
 ## Parallel Execution (Go API)
 
@@ -337,10 +369,11 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Shadow DOM support, 3-pass proximity resolution, anti-phantom guards
 - HTML reporting, screenshots, debug mode, explain mode
 - Native `WorkerPool` for parallel execution with per-worker Chrome isolation
+- Embeddable `pkg/agent` API (`Read`/`ReadText`/`Step`/`Run`/`Map`) with typed failure reasons
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Documented CLI version:** `0.0.1.4+`
+**Version:** `v0.0.4` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.4` all agree.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 
