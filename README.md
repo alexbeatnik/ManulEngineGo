@@ -373,7 +373,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Version:** `v0.0.4` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.4` all agree.
+**Version:** `v0.0.5` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.5` all agree.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 
