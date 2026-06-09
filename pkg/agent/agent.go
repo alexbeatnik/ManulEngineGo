@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -121,7 +122,10 @@ func newSession(opts Options, page browser.Page, cp *browser.ChromeProcess) *Ses
 	}
 	logger := opts.Logger
 	if logger == nil {
-		logger = utils.NewLogger(nil) // discards output
+		// Truly discard: utils.NewLogger(nil) writes to os.Stdout (the nil is
+		// the optional logFile, not the sink), which would corrupt the
+		// structured JSON the CLI/agent consumers parse. Route to io.Discard.
+		logger = utils.NewLoggerTo(io.Discard, nil)
 	}
 	return &Session{
 		rt:     runtime.New(cfg, page, logger),
@@ -162,11 +166,10 @@ type Value struct {
 	// Found reports whether the target resolved to a non-empty value.
 	Found bool
 	// Reason classifies the outcome — ReasonOK when Found, ReasonNotFound
-	// otherwise. Lets a caller branch without string-matching.
+	// otherwise. Lets a caller branch without string-matching. (Read uses the
+	// dedicated extraction probe, not the scorer pipeline, so it cannot offer
+	// Near candidates — use Step/Map to retarget after a miss.)
 	Reason Reason
-	// Near lists the top candidates, populated only when the target did NOT
-	// resolve — so an agent can retarget without a follow-up page scan.
-	Near []Cand
 }
 
 // Read extracts the text of the element matching target, using only the
@@ -196,17 +199,16 @@ func (s *Session) Read(ctx context.Context, target string) (Value, error) {
 		// a failure the caller has to string-match. Surface the top
 		// candidates so the caller can retarget without a follow-up scan.
 		if isNotFound(res, err) {
-			return Value{Found: false, Reason: ReasonNotFound, Near: topCandidates(res.RankedCandidates, 3)}, nil
+			return Value{Found: false, Reason: ReasonNotFound}, nil
 		}
 		return Value{}, fmt.Errorf("agent: read %q: %w", target, err)
 	}
 	found := res.ActionValue != ""
-	v := Value{Text: res.ActionValue, Found: found, Reason: ReasonOK}
+	reason := ReasonOK
 	if !found {
-		v.Reason = ReasonNotFound
-		v.Near = topCandidates(res.RankedCandidates, 3)
+		reason = ReasonNotFound
 	}
-	return v, nil
+	return Value{Text: res.ActionValue, Found: found, Reason: reason}, nil
 }
 
 // ReadText returns the case-preserved, shadow-DOM-aware visible text of the

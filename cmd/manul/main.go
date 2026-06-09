@@ -810,11 +810,7 @@ func cmdRead(args []string) error {
 		return rerr
 	}
 	if *jsonOut {
-		out := map[string]any{"value": v.Text, "found": v.Found, "reason": string(v.Reason)}
-		if len(v.Near) > 0 {
-			out["near"] = v.Near
-		}
-		return emitJSON(out)
+		return emitJSON(map[string]any{"value": v.Text, "found": v.Found, "reason": string(v.Reason)})
 	}
 	if !v.Found {
 		// Distinguish "nothing there" from an error: empty stdout, exit 0.

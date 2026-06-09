@@ -191,7 +191,7 @@ func engineSchema() map[string]any {
 		},
 		"agent_commands": map[string]string{
 			"run-step --compact": "run one instruction → StepOutcome JSON",
-			"read":               "read one labelled value (zero-scan) → {value, found, reason, near}",
+			"read":               "read one labelled value (zero-scan) → {value, found, reason}",
 			"read --selector":    "read sanitized region text → {text, selector}",
 			"map":                "compact landmark-grouped page map → page_map JSON",
 			"schema":             "this contract",

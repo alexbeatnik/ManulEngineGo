@@ -83,9 +83,11 @@ Groups are ordered for an agent: `Page` first, then content landmarks
 (main / forms / results), then chrome (header / nav / footer). Bound the size
 with `--max-per-group`.
 
-`read` / `agent.Read` → `{ "value": "...", "found": true, "reason": "ok",
-"near": [...] }`. `read --selector <css> --max-chars N` returns sanitized region
-text, truncated to `N` characters with a `[+K chars truncated]` marker.
+`read` / `agent.Read` → `{ "value": "...", "found": true, "reason": "ok" }`.
+Read uses a dedicated extraction probe (zero-scan), so it carries no `near`
+candidates — use `map` or `run-step` to retarget after a miss. `read --selector
+<css> --max-chars N` returns sanitized region text, truncated to `N` characters
+with a `[+K chars truncated]` marker.
 
 ## Get the machine-readable version
 

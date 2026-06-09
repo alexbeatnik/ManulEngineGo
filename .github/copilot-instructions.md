@@ -89,7 +89,7 @@ spawning Chrome, speaking CDP, or assembling the runtime themselves:
 
 - `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
 - `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
-- `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason, Near}` — typed reason + top candidates on a miss.
+- `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason}` — typed reason; uses the extraction probe (not the scorer) so it offers no `Near` candidates (use `Step`/`Map` to retarget after a miss).
 - `Session.ReadText(selector)` — sanitized visible text of a region (or whole body); `sanitizeText` also drops consecutive duplicate lines. Budget it with `agent.TruncateText(s, maxChars)`.
 - `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing. In `Run`, a step's `url` is emitted only when it CHANGES from the previous step (the final URL lives on `RunOutcome.URL`).
 - `Session.Map(MapBudget)` — landmark-grouped, deduped, ranked, capped page map.
