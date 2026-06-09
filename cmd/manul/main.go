@@ -52,7 +52,7 @@ import (
 // version is the single source of truth for the engine version. It tracks the
 // git module tag (semver vX.Y.Z) so `manul --version`, the README, and
 // `go get ...@<tag>` all agree. Bump this together with the tag.
-const version = "v0.0.6"
+const version = "v0.0.7"
 
 func main() {
 	if len(os.Args) < 2 {

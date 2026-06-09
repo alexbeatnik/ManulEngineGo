@@ -87,8 +87,12 @@ For embedding ManulHeart in agent/LLM applications, `pkg/agent` is the stable,
 compact facade — consumers get browser control "out of the box" without
 spawning Chrome, speaking CDP, or assembling the runtime themselves:
 
+- `agent.Connect(ctx, Options)` — one-call lifecycle: attaches if a Chrome is reachable at `Options.CDPURL`/`Port` (probes `/json/version`), else Launches & owns one. A consumer never probes the port, spawns Chrome, or waits for CDP itself.
 - `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
 - `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
+- `Session.PageState(ctx) → {Title, URL}` — lightweight snapshot (title via `EvalJS("document.title")`, URL via `CurrentURL`); errors per-field are soft (empty, not fatal).
+- `agent.DiffPageState(before, after)` — before/after "Page change:" report; `""` when nothing observable changed.
+- `PageMap.RenderForLLM(maxPerGroup)` — prompt-ready text block; the trailing `… +N more` combines display-capped elements with `MapGroup.Truncated` (what Map already dropped). Presentation only — Map does the dedup/rank/budget.
 - `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason}` — typed reason; uses the extraction probe (not the scorer) so it offers no `Near` candidates (use `Step`/`Map` to retarget after a miss).
 - `Session.ReadText(selector)` — sanitized visible text of a region (or whole body); `sanitizeText` also drops consecutive duplicate lines. Budget it with `agent.TruncateText(s, maxChars)`.
 - `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing. In `Run`, a step's `url` is emitted only when it CHANGES from the previous step (the final URL lives on `RunOutcome.URL`).

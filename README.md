@@ -312,16 +312,27 @@ just calls a small, compact API and never touches CDP or the runtime directly:
 ```go
 import "github.com/alexbeatnik/ManulHeart/pkg/agent"
 
-sess, err := agent.Launch(ctx, agent.Options{Headless: true}) // ManulHeart spawns & owns Chrome
-// or: agent.Attach(ctx, "http://127.0.0.1:9222", "", agent.Options{}) to use a running Chrome
-defer sess.Close()
+sess, err := agent.Connect(ctx, agent.Options{Port: 9222}) // attach if Chrome is up, else launch & own it
+// or: agent.Launch(ctx, agent.Options{Headless: true})    // always spawn & own Chrome
+// or: agent.Attach(ctx, "http://127.0.0.1:9222", "", ...) // use a specific running Chrome
+defer sess.Close()                                          // reaps Chrome when this session launched it
 
 out, _ := sess.Step(ctx, "Click the 'Login' button")  // compact: ok, reason, score, near[]
 total, _ := sess.Read(ctx, "Order total")             // zero-scan targeted text
 text, _ := sess.ReadText(ctx, "#answer")              // sanitized region/page text
 pm, _ := sess.Map(ctx, agent.MapBudget{MaxPerGroup: 8}) // budgeted landmark map
 res, _ := sess.Run(ctx, huntScript)                   // whole .hunt, compact aggregate
+ps, _ := sess.PageState(ctx)                          // {Title, URL} snapshot
+
+// Prompt-ready presentation — an embedding app needs zero browser code:
+prompt := pm.RenderForLLM(5)                           // landmark map → LLM text block
+diff := agent.DiffPageState(before, ps)               // "Page change:" before/after report
 ```
+
+`agent.Connect` is the one-call lifecycle entry point: it attaches to a Chrome
+already listening on the debug port, or launches (and owns) one otherwise — so a
+consumer never probes the port, spawns Chrome, or waits for CDP itself. The
+engine owns the whole browser; an embedding app holds only its own domain logic.
 
 Failures carry a machine-readable `Reason` (`not_found` / `ambiguous` /
 `timeout` / `verify_failed` / `action_failed`) and, for resolution problems,
@@ -392,7 +403,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Version:** `v0.0.6` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.6` all agree.
+**Version:** `v0.0.7` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.7` all agree.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

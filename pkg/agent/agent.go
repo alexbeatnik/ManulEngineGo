@@ -45,8 +45,13 @@ type Options struct {
 	// Headless runs Chrome without a visible window. Default: false.
 	Headless bool
 	// Port is the CDP debug port for a Launch-managed Chrome. 0 → 9222.
-	// Ignored by Attach.
+	// Ignored by Attach. Connect uses it to both probe for an existing Chrome
+	// and, failing that, to Launch one.
 	Port int
+	// CDPURL is an explicit CDP HTTP endpoint (e.g. "http://127.0.0.1:9222").
+	// Used by Connect: when set it takes precedence over Port for the
+	// attach probe. Ignored by Launch.
+	CDPURL string
 	// ExecutablePath overrides the Chrome binary location (Launch only).
 	ExecutablePath string
 	// UserDataDir overrides the Chrome profile directory (Launch only).
