@@ -52,7 +52,7 @@ import (
 // version is the single source of truth for the engine version. It tracks the
 // git module tag (semver vX.Y.Z) so `manul --version`, the README, and
 // `go get ...@<tag>` all agree. Bump this together with the tag.
-const version = "v0.0.5"
+const version = "v0.0.6"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -91,6 +91,16 @@ func main() {
 		}
 	case "read":
 		if err := cmdRead(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "map":
+		if err := cmdMap(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "schema":
+		if err := cmdSchema(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -757,6 +767,7 @@ func cmdRead(args []string) error {
 	cdpEndpoint := fs.String("cdp", "http://127.0.0.1:9222", "CDP endpoint URL")
 	selector := fs.String("selector", "", "CSS selector for region text (uses ReadText instead of targeted Read)")
 	urlSubstr := fs.String("tab", "", "attach to the page whose URL contains this substring")
+	maxChars := fs.Int("max-chars", 0, "truncate --selector region text to this many characters (0 = no limit)")
 	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: manul read '<target>' [flags]\n\n"+
@@ -786,6 +797,7 @@ func cmdRead(args []string) error {
 		if terr != nil {
 			return terr
 		}
+		text = agent.TruncateText(text, *maxChars)
 		if *jsonOut {
 			return emitJSON(map[string]any{"text": text, "selector": *selector})
 		}
@@ -798,7 +810,11 @@ func cmdRead(args []string) error {
 		return rerr
 	}
 	if *jsonOut {
-		return emitJSON(map[string]any{"value": v.Text, "found": v.Found})
+		out := map[string]any{"value": v.Text, "found": v.Found, "reason": string(v.Reason)}
+		if len(v.Near) > 0 {
+			out["near"] = v.Near
+		}
+		return emitJSON(out)
 	}
 	if !v.Found {
 		// Distinguish "nothing there" from an error: empty stdout, exit 0.
@@ -947,7 +963,7 @@ func cmdScan(args []string) error {
 		if *jsonOut {
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			return enc.Encode(groups)
+			return enc.Encode(compactScanGroups(groups))
 		}
 		// CDP + non-JSON: still write the .hunt draft so the human-driven
 		// flow stays useful. URL isn't known at the CLI level, fall back
@@ -980,7 +996,7 @@ func cmdScan(args []string) error {
 		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		return enc.Encode(groups)
+		return enc.Encode(compactScanGroups(groups))
 	}
 
 	if *full {
@@ -1053,6 +1069,8 @@ Usage:
   manul run <target> [flags]           Explicit run subcommand
   manul run-step '<command>' [flags]   Execute a single DSL command (--compact for agent StepOutcome)
   manul read '<target>' [flags]        Read one value off an open page (zero-scan; --selector for region text)
+  manul map [flags]                    Compact landmark-grouped JSON map of the open page (for LLM agents)
+  manul schema [--json]                Emit the DSL grammar + agent JSON shapes as an LLM contract
   manul scan <URL> [flags]             Scan a URL and generate a draft .hunt file (--full for grouped scan)
   manul record <URL> [flags]           Record interactions and generate a .hunt file
   manul daemon <directory> [flags]     Run scheduled .hunt files continuously
@@ -1095,6 +1113,8 @@ Examples:
   manul run-step "Click the 'Login' button" --cdp http://127.0.0.1:9222
   manul run-step "Click 'Checkout'" --compact --cdp http://127.0.0.1:9222
   manul read "Order total" --cdp http://127.0.0.1:9222
-  manul read --selector "#answer" --cdp http://127.0.0.1:9222
+  manul read --selector "#answer" --max-chars 2000 --cdp http://127.0.0.1:9222
+  manul map --cdp http://127.0.0.1:9222
+  manul schema
 `)
 }

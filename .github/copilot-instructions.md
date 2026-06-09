@@ -89,16 +89,32 @@ spawning Chrome, speaking CDP, or assembling the runtime themselves:
 
 - `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
 - `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
-- `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot).
-- `Session.ReadText(selector)` — sanitized visible text of a region (or whole body).
-- `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing.
+- `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason, Near}` — typed reason + top candidates on a miss.
+- `Session.ReadText(selector)` — sanitized visible text of a region (or whole body); `sanitizeText` also drops consecutive duplicate lines. Budget it with `agent.TruncateText(s, maxChars)`.
+- `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing. In `Run`, a step's `url` is emitted only when it CHANGES from the previous step (the final URL lives on `RunOutcome.URL`).
 - `Session.Map(MapBudget)` — landmark-grouped, deduped, ranked, capped page map.
 
 A `Session` owns one single-goroutine `Runtime`; it serializes its own calls
 but is not parallel — one Session per goroutine. The CLI (`manul read`,
-`manul run-step --compact`) routes through this same code path. The typed
-`explain.FailureReason` on `ExecutionResult` is the source the agent `Reason`
-mirrors.
+`manul run-step --compact`, `manul map`) routes through this same code path. The
+typed `explain.FailureReason` on `ExecutionResult` is the source the agent
+`Reason` mirrors.
+
+### LLM contract commands (`0.0.6`+)
+
+Two CLI commands exist to feed an LLM a compact, authoritative view of the
+engine — both keep stdout to the JSON payload:
+
+- `manul map [--cdp URL] [--max-per-group N] [--include-unlabeled] [--tab sub]` —
+  thin wrapper over `Session.Map`; emits the compact `PageMap` (label+role only,
+  deduped, capped). The prompt-ready alternative to a full `scan` draft.
+- `manul schema` — emits the self-describing contract (DSL verbs + one-line
+  syntax, agent JSON shapes, failure-reason enum), version-stamped. Build it in
+  `cmd/manul/agent_cmds.go::engineSchema`; keep it in sync with `pkg/dsl` verbs
+  and `pkg/agent` shapes. `docs/dsl-for-llms.md` is the human mirror.
+- `scan --json` (full mode) now emits the compact `{label, role, editable}`
+  projection (`compactScanGroups`) — the `locator`/`tag` fields are dropped from
+  the agent-facing JSON (a CSS selector is not a public targeting API).
 
 ## Concurrency contract (`0.0.0.5`+)
 

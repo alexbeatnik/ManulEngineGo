@@ -17,6 +17,7 @@ Single dependency: `gorilla/websocket`. Pure Go. Single static binary. True goro
 - **[Overview](docs/overview.md)** — Why ManulHeart exists and how it differs from Playwright/Node.js stacks
 - **[Getting Started](docs/getting-started.md)** — Build, install, and run your first hunt
 - **[DSL Syntax](docs/dsl-syntax.md)** — Complete `.hunt` language reference
+- **[DSL for LLMs](docs/dsl-for-llms.md)** — Compact cheat-sheet + agent JSON shapes (`manul schema` is the machine-readable mirror)
 - **[Reports & Explainability](docs/overview.md#explainability)** — Scoring breakdowns and HTML reports
 - **[Extensions](docs/extensions.md)** — `CALL GO`, custom controls, and the Go extension API
 - **[Loops & Page Objects](docs/loops-and-pages.md)** — `REPEAT`, `FOR EACH`, `WHILE`, and the `pages/` registry
@@ -137,11 +138,28 @@ region:
 
 ```bash
 manul read "Order total" --cdp http://127.0.0.1:9222
-manul read --selector "#answer" --cdp http://127.0.0.1:9222
+manul read --selector "#answer" --max-chars 2000 --cdp http://127.0.0.1:9222
 ```
 
-These three (`read`, `run-step --compact`, and `run`) are the CLI face of the
-embeddable `pkg/agent` API (`agent.Session` — `Read` / `ReadText` / `Step` /
+`read` returns `{value, found, reason, near}` — on a miss it carries the typed
+`reason` and the top `near` candidates so a driver retargets without a
+follow-up scan. `--max-chars` budgets `--selector` region text so a read can't
+flood a prompt.
+
+For an LLM that needs the structure of the open page, `manul map` emits a
+compact, landmark-grouped JSON map (label + role only, deduped, per-group
+capped) — the cheap, prompt-ready alternative to a full `scan` draft. And
+`manul schema` emits the engine's self-describing contract (DSL verbs + agent
+JSON shapes + failure-reason enum) so a consumer pins it instead of stuffing
+full prose docs into every prompt:
+
+```bash
+manul map --cdp http://127.0.0.1:9222 --max-per-group 8
+manul schema   # → docs/dsl-for-llms.md is the human mirror of this contract
+```
+
+These (`read`, `run-step --compact`, `run`, `map`, `schema`) are the CLI face of
+the embeddable `pkg/agent` API (`agent.Session` — `Read` / `ReadText` / `Step` /
 `Run` / `Map`); the CLI and in-process consumers share one code path.
 
 Pipe a hunt script from stdin — useful for one-off scripts, editor integrations, and CI generators that build hunts on the fly:
@@ -209,6 +227,7 @@ The same `.hunt` file against the same page produces the same resolution path ev
 | **Page scanner** | `manul scan <URL>` generates a draft `.hunt`; `--full` groups elements by semantic region (form, nav, main, shadow) including Shadow DOM. |
 | **Stdin hunts** | `manul -` reads a hunt script from stdin and always emits a partial result on failure so dispatchers can read per-step errors. |
 | **Embeddable agent API** | `pkg/agent.Session` owns Chrome and exposes compact, agent-friendly calls: `Read` (zero-scan), `ReadText`, `Step`/`Run` (typed `Reason` + `Near` candidates), `Map` (budgeted scan). CLI `read` / `run-step --compact` are thin wrappers over it. |
+| **LLM contract commands** | `manul map` emits a compact landmark-grouped page map; `manul schema` emits the DSL grammar + agent JSON shapes as a token-lean, version-stamped contract. See [docs/dsl-for-llms.md](docs/dsl-for-llms.md). |
 | **Zero external deps** | Only `gorilla/websocket`. No Playwright, no Node.js, no Python. |
 
 ---
@@ -373,7 +392,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Version:** `v0.0.5` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.5` all agree.
+**Version:** `v0.0.6` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.6` all agree.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

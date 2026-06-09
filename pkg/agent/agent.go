@@ -161,6 +161,12 @@ type Value struct {
 	Text string
 	// Found reports whether the target resolved to a non-empty value.
 	Found bool
+	// Reason classifies the outcome — ReasonOK when Found, ReasonNotFound
+	// otherwise. Lets a caller branch without string-matching.
+	Reason Reason
+	// Near lists the top candidates, populated only when the target did NOT
+	// resolve — so an agent can retarget without a follow-up page scan.
+	Near []Cand
 }
 
 // Read extracts the text of the element matching target, using only the
@@ -187,13 +193,20 @@ func (s *Session) Read(ctx context.Context, target string) (Value, error) {
 	if err != nil {
 		// CmdExtract reports "not found or empty" as an error; for Read we
 		// translate that into a clean not-found rather than surfacing it as
-		// a failure the caller has to string-match.
+		// a failure the caller has to string-match. Surface the top
+		// candidates so the caller can retarget without a follow-up scan.
 		if isNotFound(res, err) {
-			return Value{Found: false}, nil
+			return Value{Found: false, Reason: ReasonNotFound, Near: topCandidates(res.RankedCandidates, 3)}, nil
 		}
 		return Value{}, fmt.Errorf("agent: read %q: %w", target, err)
 	}
-	return Value{Text: res.ActionValue, Found: res.ActionValue != ""}, nil
+	found := res.ActionValue != ""
+	v := Value{Text: res.ActionValue, Found: found, Reason: ReasonOK}
+	if !found {
+		v.Reason = ReasonNotFound
+		v.Near = topCandidates(res.RankedCandidates, 3)
+	}
+	return v, nil
 }
 
 // ReadText returns the case-preserved, shadow-DOM-aware visible text of the
@@ -253,9 +266,31 @@ func sanitizeText(raw string) string {
 		if strings.Contains(line, "M") && strings.Contains(line, "Z") && len(line) > 100 {
 			continue
 		}
+		// Drop consecutive duplicate lines (repeated nav/chrome text) so the
+		// LLM isn't billed for the same string twice in a row.
+		if len(cleaned) > 0 && cleaned[len(cleaned)-1] == line {
+			continue
+		}
 		cleaned = append(cleaned, line)
 	}
 	return strings.Join(cleaned, "\n")
+}
+
+// TruncateText caps text to maxChars (counted by rune), appending a short
+// "[+N chars truncated]" marker so a consumer knows the read was budgeted.
+// maxChars <= 0 returns s unchanged. This is the cheap way for an LLM caller
+// to bound how much page prose lands in a prompt.
+func TruncateText(s string, maxChars int) string {
+	if maxChars <= 0 {
+		return s
+	}
+	runes := []rune(s)
+	if len(runes) <= maxChars {
+		return s
+	}
+	dropped := len(runes) - maxChars
+	return strings.TrimRight(string(runes[:maxChars]), " \n") +
+		fmt.Sprintf("\n[+%d chars truncated]", dropped)
 }
 
 // Reason is the agent-facing, machine-readable classification of a step's
@@ -388,8 +423,18 @@ func (s *Session) Run(ctx context.Context, huntScript string) (RunOutcome, error
 		out.Passed = hr.Passed
 		out.Failed = hr.Failed
 		out.Duration = hr.TotalDurationMS
+		// The final URL lives on RunOutcome; per-step URLs are only emitted
+		// when they CHANGE from the previous step, so a multi-step run on one
+		// page doesn't repeat the same URL on every StepOutcome.
+		prevURL := ""
 		for _, r := range hr.Results {
-			out.Results = append(out.Results, outcomeFrom(r, errFromResult(r)))
+			so := outcomeFrom(r, errFromResult(r))
+			if so.URL == prevURL {
+				so.URL = ""
+			} else if so.URL != "" {
+				prevURL = so.URL
+			}
+			out.Results = append(out.Results, so)
 		}
 		out.URL = lastURL(hr.Results)
 	}
