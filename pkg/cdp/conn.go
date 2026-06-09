@@ -67,6 +67,14 @@ type Conn struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	// parentCtx is the caller's Dial-time context. connCtx is deliberately
+	// detached from it (so a short dial deadline doesn't kill a live conn),
+	// but Call still honors parentCtx cancellation directly: a goroutine
+	// bridges parentCtx.Done → Close asynchronously, so without this a Call
+	// issued right after the parent is cancelled could race the teardown and
+	// succeed. Checking parentCtx.Err() up front makes that deterministic.
+	parentCtx context.Context
 }
 
 // Subscription is a handle to a CDP event subscription. The caller must
@@ -114,6 +122,7 @@ func DialTarget(ctx context.Context, wsURL string) (*Conn, error) {
 		eventSubs: make(map[uint64]chan *msgResp),
 		ctx:       connCtx,
 		cancel:    cancel,
+		parentCtx: ctx,
 	}
 
 	// Watch for parent ctx cancellation: tear down the connection.
@@ -244,6 +253,15 @@ func (c *Conn) unsubscribe(id uint64) {
 
 // Call sends a JSON-RPC request and waits for the response.
 func (c *Conn) Call(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	// Honor the Dial-time parent context up front: once it's cancelled the
+	// connection is being (or about to be) torn down, so fail deterministically
+	// instead of racing the async teardown goroutine.
+	if c.parentCtx != nil {
+		if err := c.parentCtx.Err(); err != nil {
+			return nil, fmt.Errorf("cdp connection closed: %w", err)
+		}
+	}
+
 	id := c.idSeq.Add(1)
 	ch := make(chan *msgResp, 1)
 
@@ -269,6 +287,10 @@ func (c *Conn) Call(ctx context.Context, method string, params interface{}) (jso
 	case <-ctx.Done():
 		c.deletePending(id)
 		return nil, ctx.Err()
+	case <-c.parentCtx.Done():
+		// Parent cancelled while this Call was in flight — teardown is coming.
+		c.deletePending(id)
+		return nil, fmt.Errorf("cdp connection closed")
 	case <-c.ctx.Done():
 		c.deletePending(id)
 		return nil, fmt.Errorf("cdp connection closed")
