@@ -91,6 +91,7 @@ spawning Chrome, speaking CDP, or assembling the runtime themselves:
 - `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
 - `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
 - `Session.PageState(ctx) → {Title, URL}` — lightweight snapshot (title via `EvalJS("document.title")`, URL via `CurrentURL`); errors per-field are soft (empty, not fatal).
+- `Session.Lookup(ctx, url, settle, extractJS)` — opens url in a background tab (via `CDPBrowser.OpenTarget` → `Target.createTarget`), waits `settle`, runs `extractJS` (or `BuildPageTextProbe` when empty), sanitizes, then reaps the tab (`CloseTarget`). The whole background-tab lifecycle lives in the engine; a consumer passes only its domain extractor. Needs a CDP endpoint (set by Launch/Attach/Connect).
 - `agent.DiffPageState(before, after)` — before/after "Page change:" report; `""` when nothing observable changed.
 - `PageMap.RenderForLLM(maxPerGroup)` — prompt-ready text block; the trailing `… +N more` combines display-capped elements with `MapGroup.Truncated` (what Map already dropped). Presentation only — Map does the dedup/rank/budget.
 - `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason}` — typed reason; uses the extraction probe (not the scorer) so it offers no `Near` candidates (use `Step`/`Map` to retarget after a miss).

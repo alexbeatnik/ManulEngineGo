@@ -73,9 +73,86 @@ func (b *CDPBrowser) PageMatching(ctx context.Context, urlSubstr string) (Page, 
 	return nil, fmt.Errorf("browser: no page target with URL containing %q (found %d targets)", urlSubstr, len(targets))
 }
 
-// NewPage is not yet implemented for CDP (requires Target.createTarget).
+// NewPage opens a fresh blank tab. It is OpenTarget with a blank URL; the
+// caller is responsible for closing the tab via CloseTarget when done (the
+// returned Page only owns the per-tab WebSocket, not the tab itself).
 func (b *CDPBrowser) NewPage(ctx context.Context) (Page, error) {
-	return nil, fmt.Errorf("browser: NewPage not yet implemented for CDP backend")
+	page, _, err := b.OpenTarget(ctx, "about:blank")
+	return page, err
+}
+
+// OpenTarget creates a new page target at url (a background tab — the user's
+// active tab is not switched away from) and returns a connected Page plus the
+// new target's ID. Use CloseTarget(targetID) to reap the tab. This is the
+// browser-wide primitive behind background lookups.
+func (b *CDPBrowser) OpenTarget(ctx context.Context, url string) (Page, string, error) {
+	browserWS, err := cdp.BrowserWSURL(ctx, b.endpoint)
+	if err != nil {
+		return nil, "", fmt.Errorf("browser: browser ws: %w", err)
+	}
+	bconn, err := cdp.DialTarget(ctx, browserWS)
+	if err != nil {
+		return nil, "", fmt.Errorf("browser: dial browser ws: %w", err)
+	}
+	defer bconn.Close()
+
+	raw, err := bconn.Call(ctx, "Target.createTarget", map[string]any{"url": url})
+	if err != nil {
+		return nil, "", fmt.Errorf("browser: createTarget: %w", err)
+	}
+	var created struct {
+		TargetID string `json:"targetId"`
+	}
+	if err := json.Unmarshal(raw, &created); err != nil || created.TargetID == "" {
+		return nil, "", fmt.Errorf("browser: createTarget: bad response %s", string(raw))
+	}
+
+	wsURL, err := b.targetWSURL(ctx, created.TargetID)
+	if err != nil {
+		_ = b.CloseTarget(context.Background(), created.TargetID)
+		return nil, "", err
+	}
+	conn, err := cdp.DialTarget(ctx, wsURL)
+	if err != nil {
+		_ = b.CloseTarget(context.Background(), created.TargetID)
+		return nil, "", fmt.Errorf("browser: dial new target: %w", err)
+	}
+	return &CDPPage{conn: conn}, created.TargetID, nil
+}
+
+// targetWSURL polls /json/list until the freshly-created target exposes its
+// per-target WebSocket URL (it can lag the createTarget reply by a few ms).
+func (b *CDPBrowser) targetWSURL(ctx context.Context, targetID string) (string, error) {
+	for {
+		targets, err := cdp.ListTargets(ctx, b.endpoint)
+		if err == nil {
+			for _, t := range targets {
+				if t.ID == targetID && t.WSURL != "" {
+					return t.WSURL, nil
+				}
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("browser: target %s ws url not ready: %w", targetID, ctx.Err())
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+}
+
+// CloseTarget closes a tab by target ID via the browser-level connection.
+func (b *CDPBrowser) CloseTarget(ctx context.Context, targetID string) error {
+	browserWS, err := cdp.BrowserWSURL(ctx, b.endpoint)
+	if err != nil {
+		return err
+	}
+	bconn, err := cdp.DialTarget(ctx, browserWS)
+	if err != nil {
+		return err
+	}
+	defer bconn.Close()
+	_, err = bconn.Call(ctx, "Target.closeTarget", map[string]any{"targetId": targetID})
+	return err
 }
 
 // Close is a no-op for CDPBrowser — we don't own the browser process.
@@ -188,7 +265,6 @@ func (p *CDPPage) ScrollIntoView(ctx context.Context, id int, xpath string) erro
 func (p *CDPPage) SetChecked(ctx context.Context, id int, xpath string, checked bool) error {
 	return p.conn.SetChecked(ctx, id, xpath, checked)
 }
-
 
 func (p *CDPPage) ScrollPage(ctx context.Context, direction, container string) error {
 	return cdp.ScrollPage(ctx, p.conn, direction, container)

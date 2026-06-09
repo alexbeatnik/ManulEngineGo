@@ -323,11 +323,18 @@ text, _ := sess.ReadText(ctx, "#answer")              // sanitized region/page t
 pm, _ := sess.Map(ctx, agent.MapBudget{MaxPerGroup: 8}) // budgeted landmark map
 res, _ := sess.Run(ctx, huntScript)                   // whole .hunt, compact aggregate
 ps, _ := sess.PageState(ctx)                          // {Title, URL} snapshot
+ans, _ := sess.Lookup(ctx, url, 3*time.Second, "")    // background-tab read (no UI disruption)
 
 // Prompt-ready presentation — an embedding app needs zero browser code:
 prompt := pm.RenderForLLM(5)                           // landmark map → LLM text block
 diff := agent.DiffPageState(before, ps)               // "Page change:" before/after report
 ```
+
+`Session.Lookup` opens a URL in a **background tab** (the active page is never
+switched away from), waits for it to settle, runs an optional extractor JS
+(or reads sanitized body text), then closes the tab — the whole tab lifecycle
+(`Target.createTarget`/`closeTarget`) lives in the engine. A consumer needs no
+CDP code to do unobtrusive web lookups in the user's logged-in profile.
 
 `agent.Connect` is the one-call lifecycle entry point: it attaches to a Chrome
 already listening on the debug port, or launches (and owns) one otherwise — so a

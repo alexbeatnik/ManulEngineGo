@@ -333,6 +333,38 @@ func ListTargets(ctx context.Context, endpoint string) ([]Target, error) {
 	return targets, nil
 }
 
+// BrowserWSURL returns Chrome's browser-level DevTools WebSocket endpoint
+// (from /json/version). Unlike a per-target WS, this drives browser-wide
+// commands like Target.createTarget / Target.closeTarget — needed to open and
+// reap a background tab.
+func BrowserWSURL(ctx context.Context, endpoint string) (string, error) {
+	url := endpoint
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		url = fmt.Sprintf("http://%s", endpoint)
+	}
+	url = strings.TrimSuffix(url, "/") + "/json/version"
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("browser ws url: %w", err)
+	}
+	defer resp.Body.Close()
+	var v struct {
+		WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		return "", fmt.Errorf("decode browser ws url: %w", err)
+	}
+	if v.WebSocketDebuggerURL == "" {
+		return "", fmt.Errorf("cdp: no browser-level webSocketDebuggerUrl")
+	}
+	return v.WebSocketDebuggerURL, nil
+}
+
 // FindPageTarget returns the first page-type target from a list.
 func FindPageTarget(targets []Target) (Target, error) {
 	for _, t := range targets {
