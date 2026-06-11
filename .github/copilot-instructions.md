@@ -20,7 +20,7 @@
 ## CLI INSTALL + VERSION
 
 > **CRITICAL — Read this first.**
-> Current documented ManulHeart CLI version is **0.0.1.4**.
+> Current documented ManulHeart version is **v0.0.8** (one semver everywhere: the git tag, `manul --version` in `cmd/manul/main.go`, and the README all agree — bump them together).
 > When documenting install or usage, prefer the Go binary as a PATH-visible system command named `manul`
 > (for example `~/.local/bin/manul` or `/usr/local/bin/manul`) so editor extensions can invoke it directly.
 > Do not document the repo-local binary as the only intended integration path when the request is about running from tools or extensions.
@@ -93,10 +93,12 @@ spawning Chrome, speaking CDP, or assembling the runtime themselves:
 - `Session.PageState(ctx) → {Title, URL}` — lightweight snapshot (title via `EvalJS("document.title")`, URL via `CurrentURL`); errors per-field are soft (empty, not fatal).
 - `Session.Lookup(ctx, url, settle, extractJS)` — opens url in a background tab (via `CDPBrowser.OpenTarget` → `Target.createTarget`), waits `settle`, runs `extractJS` (or `BuildPageTextProbe` when empty), sanitizes, then reaps the tab (`CloseTarget`). The whole background-tab lifecycle lives in the engine; a consumer passes only its domain extractor. Needs a CDP endpoint (set by Launch/Attach/Connect).
 - `agent.DiffPageState(before, after)` — before/after "Page change:" report; `""` when nothing observable changed.
-- `PageMap.RenderForLLM(maxPerGroup)` — prompt-ready text block; the trailing `… +N more` combines display-capped elements with `MapGroup.Truncated` (what Map already dropped). Presentation only — Map does the dedup/rank/budget.
+- `agent.DescribePageChange(before, after)` — like DiffPageState but ALWAYS speaks: explicit "the page did NOT change — the action likely had NO effect" on no change. Use it when the consumer is a small LLM that needs the no-change signal spelled out.
+- `PageMap.RenderForLLM(maxPerGroup)` — prompt-ready text block (`v0.0.8` format): usage header + `Current page: <url>` + `- 'Label' [role — VERB]` per element. Labels are quoted (copy-pastable) and `roleActionVerb` pairs each role with its DSL verb (textbox→FILL, combobox→SELECT, checkbox→CHECK, else CLICK). The trailing `… +N more` combines display-capped elements with `MapGroup.Truncated` (what Map already dropped). Presentation only — Map does the dedup/rank/budget.
+- `StepOutcome.DescribeForLLM()` / `RunOutcome.RenderForLLM()` — plain-language outcome rendering (pkg/agent/describe.go): Reason-specific "Why" + corrective advice, quoted `Near` labels, weak-match warnings, and an explicit "later steps did NOT run" after a failure. The raw runtime error strings ("target resolution too ambiguous", "target not found") must stay STABLE — downstream consumers match on them; friendly text lives only in this layer.
 - `Session.Read(target)` — zero-scan targeted text extraction (one probe, no snapshot). Returns `Value{Text, Found, Reason}` — typed reason; uses the extraction probe (not the scorer) so it offers no `Near` candidates (use `Step`/`Map` to retarget after a miss).
 - `Session.ReadText(selector)` — sanitized visible text of a region (or whole body); `sanitizeText` also drops consecutive duplicate lines. Budget it with `agent.TruncateText(s, maxChars)`.
-- `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing. In `Run`, a step's `url` is emitted only when it CHANGES from the previous step (the final URL lives on `RunOutcome.URL`).
+- `Session.Step(instruction)` / `Session.Run(huntScript)` — compact `StepOutcome` / `RunOutcome` with a typed `Reason` (`ok`/`not_found`/`ambiguous`/`timeout`/`verify_failed`/`action_failed`) and top-N `Near` candidates on failure/low-confidence — no scorer breakdown, no error-string parsing. `StepOutcome.Step` carries the raw DSL line for echo-back in reports. In `Run`, a step's `url` is emitted only when it CHANGES from the previous step (the final URL lives on `RunOutcome.URL`).
 - `Session.Map(MapBudget)` — landmark-grouped, deduped, ranked, capped page map.
 
 A `Session` owns one single-goroutine `Runtime`; it serializes its own calls
@@ -223,6 +225,7 @@ When generating automation logic:
 * Use **quoted strings** for target labels (`'Login'`) to ensure high scoring priority.
 * For tables, use **text identifiers** (`CHECK the checkbox for 'Item ID'`) – let the 3-pass targeting handle the proximity to the actual checkbox input.
 * For custom dropdowns, the engine automatically falls back from `select_option` to `click()` on the resolved target.
+* **Keyboard dispatch (`v0.0.8`+):** `CDPPage.DispatchKey` sends `text`/`unmodifiedText` on keyDown for character-producing keys (Enter → `"\r"`) — without it Chrome emits a rawKeyDown, no keypress fires, and `PRESS Enter` never submits forms. Key names are normalized (`enter`/`esc`/`space`/`down` → DOM key values); keyUp must NOT carry text. Tests: `pkg/browser/keys_test.go`.
 
 ## Page Scanner (`0.0.1.2`+)
 

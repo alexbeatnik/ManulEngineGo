@@ -227,7 +227,9 @@ The same `.hunt` file against the same page produces the same resolution path ev
 | **Page scanner** | `manul scan <URL>` generates a draft `.hunt`; `--full` groups elements by semantic region (form, nav, main, shadow) including Shadow DOM. |
 | **Stdin hunts** | `manul -` reads a hunt script from stdin and always emits a partial result on failure so dispatchers can read per-step errors. |
 | **Embeddable agent API** | `pkg/agent.Session` owns Chrome and exposes compact, agent-friendly calls: `Read` (zero-scan), `ReadText`, `Step`/`Run` (typed `Reason` + `Near` candidates), `Map` (budgeted scan). CLI `read` / `run-step --compact` are thin wrappers over it. |
+| **LLM-friendly rendering** | `PageMap.RenderForLLM` lists quoted, copy-pastable labels with the DSL verb per role (`'Search' [textbox — FILL]`); `DescribeForLLM`/`RenderForLLM` on outcomes translate failures into plain-language advice; `DescribePageChange` says explicitly when the page did NOT change. Tuned so even small local models stay grounded. |
 | **LLM contract commands** | `manul map` emits a compact landmark-grouped page map; `manul schema` emits the DSL grammar + agent JSON shapes as a token-lean, version-stamped contract. See [docs/dsl-for-llms.md](docs/dsl-for-llms.md). |
+| **Reliable keyboard input** | `PRESS` dispatches real character events: Enter carries `text:"\r"` (forms actually submit — a bare keyDown is just a rawKeyDown), key names are normalized (`enter`/`esc`/`space`/`down` → DOM key values), and `code`/virtual-key fields are populated. |
 | **Zero external deps** | Only `gorilla/websocket`. No Playwright, no Node.js, no Python. |
 
 ---
@@ -326,8 +328,11 @@ ps, _ := sess.PageState(ctx)                          // {Title, URL} snapshot
 ans, _ := sess.Lookup(ctx, url, 3*time.Second, "")    // background-tab read (no UI disruption)
 
 // Prompt-ready presentation — an embedding app needs zero browser code:
-prompt := pm.RenderForLLM(5)                           // landmark map → LLM text block
-diff := agent.DiffPageState(before, ps)               // "Page change:" before/after report
+prompt := pm.RenderForLLM(5)            // page map: quoted labels + per-role DSL verb (CLICK/FILL/SELECT/CHECK)
+report := res.RenderForLLM()            // whole run in plain language, with corrective advice per failed step
+line := out.DescribeForLLM()            // one step outcome: what ran, why it failed, what to do next
+diff := agent.DiffPageState(before, ps) // "Page change:" report; "" when nothing changed
+verbose := agent.DescribePageChange(before, ps) // ALWAYS speaks — incl. explicit "the page did NOT change"
 ```
 
 `Session.Lookup` opens a URL in a **background tab** (the active page is never
@@ -345,6 +350,16 @@ Failures carry a machine-readable `Reason` (`not_found` / `ambiguous` /
 `timeout` / `verify_failed` / `action_failed`) and, for resolution problems,
 the top candidates in `Near` — so a caller branches on a typed reason instead
 of parsing error strings, and corrects a weak match without a follow-up scan.
+
+For LLM drivers — especially small local models — every outcome also renders
+as plain language: `StepOutcome.DescribeForLLM()` translates the raw engine
+error ("target resolution too ambiguous (confidence 0.033)") into what
+happened, why, and what to do next, quoting the closest real element labels
+verbatim so the model can copy them; `RunOutcome.RenderForLLM()` adds the
+run verdict and states explicitly that steps after a failure did NOT run; and
+`agent.DescribePageChange` (unlike `DiffPageState`) always says something — an
+explicit "the page did NOT change, the action likely had no effect" is the
+signal a weak model needs to stop declaring victory after a swallowed click.
 A `Session` owns one single-goroutine `Runtime`; use one Session per goroutine
 for parallel work (or `pkg/worker` below). The CLI's `read` and
 `run-step --compact` are thin wrappers over this same code path.
@@ -407,10 +422,12 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - HTML reporting, screenshots, debug mode, explain mode
 - Native `WorkerPool` for parallel execution with per-worker Chrome isolation
 - Embeddable `pkg/agent` API (`Read`/`ReadText`/`Step`/`Run`/`Map`) with typed failure reasons
+- Plain-language outcome rendering for LLM drivers (`DescribeForLLM`, `RunOutcome.RenderForLLM`, `DescribePageChange`) and a copy-pastable page-map format with per-role DSL verbs
+- Character-accurate keyboard dispatch (`PRESS Enter` generates a real keypress and submits forms; key-name normalization)
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Version:** `v0.0.7` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.7` all agree.
+**Version:** `v0.0.8` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.8` all agree.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 

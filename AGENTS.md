@@ -143,13 +143,48 @@ res, _ := sess.Run(ctx, huntScript)                  // whole .hunt, compact agg
   `explain.FailureReason` (set at the targeting sites in `pkg/runtime`, fallback
   `classifyFailure` for the rest). `Near` (top-3 `{Text,Score}`) is populated on
   failure AND on low-confidence success (score < 0.35) so a caller retargets
-  without a follow-up scan — never by parsing error strings.
+  without a follow-up scan — never by parsing error strings. `StepOutcome.Step`
+  carries the raw DSL line so reports can echo the exact command back to a model.
 - `Read` uses `BuildExtractProbe` (targeted, one round-trip); `ReadText` uses
   the case-preserved `BuildPageTextProbe` + `sanitizeText`. Don't reuse
   `BuildVisibleTextProbe` for reading — it lowercases/flattens for matching.
 - A `Session` owns ONE single-goroutine `Runtime` (it serializes its own calls
   with a mutex but is not parallel). One Session per goroutine, or use `pkg/worker`.
 - The CLI's `read` and `run-step --compact` route through this same code path.
+
+### LLM-Facing Rendering (`v0.0.8`+)
+
+Everything an LLM reads lives in `pkg/agent` (`render.go` + `describe.go`) and
+is tuned so even the weakest local model stays grounded:
+
+- `PageMap.RenderForLLM(maxPerGroup)` — usage header + `Current page: <url>` +
+  one line per element: `- 'Label' [role — VERB]`. Labels are single-quoted
+  (copy-pastable verbatim, inner spaces visible); `roleActionVerb` maps each
+  role to the DSL verb that works on it (textbox→FILL, combobox→SELECT,
+  checkbox/switch→CHECK, everything else→CLICK).
+- `StepOutcome.DescribeForLLM()` — plain language: `OK:`/`FAILED:` + the raw
+  step + a Reason-specific "Why" + "what to do next", quoting `Near` labels
+  exactly. A low-confidence success warns it may have hit the WRONG element.
+- `RunOutcome.RenderForLLM()` — run verdict, final URL, per-step lines, and an
+  explicit "the run STOPPED at the first failed step — later steps did NOT run".
+- `agent.DescribePageChange(before, after)` — unlike `DiffPageState` (returns
+  `""` on no change), it ALWAYS speaks: "the page did NOT change — the last
+  action most likely had NO effect". That explicit signal is what stops a small
+  model from declaring victory after a swallowed click.
+
+Keep the raw runtime error strings (`"target resolution too ambiguous"`,
+`"target not found"`) STABLE — downstream consumers (OS-Manul) match on them;
+the friendly translation belongs in this layer, never in `pkg/runtime`.
+
+### Keyboard Dispatch (`v0.0.8`+)
+
+`CDPPage.DispatchKey` (pkg/browser/cdp_backend.go) sends character-accurate
+events: keyDown carries `text`/`unmodifiedText` for character-producing keys
+(Enter → `"\r"`) — without it Chrome treats the event as a rawKeyDown, no
+keypress fires, and `PRESS Enter` never submits forms. Key names are
+normalized case-insensitively (`enter`/`return`/`esc`/`space`/`down` → DOM
+`KeyboardEvent.key` values) and `code`/`windowsVirtualKeyCode` are populated.
+The matching keyUp must NOT carry text. Tests: `pkg/browser/keys_test.go`.
 
 ### Configuration Priority Chain (`0.0.1.0`+)
 
