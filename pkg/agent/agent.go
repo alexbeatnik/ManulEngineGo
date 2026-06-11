@@ -346,6 +346,9 @@ type Cand struct {
 type StepOutcome struct {
 	// OK is true when the step succeeded.
 	OK bool `json:"ok"`
+	// Step is the raw DSL line that was executed (e.g. "CLICK 'Login'").
+	// Carried so DescribeForLLM can echo the exact command back to a model.
+	Step string `json:"step,omitempty"`
 	// Action is the lowercase command kind (click, fill, navigate, …).
 	Action string `json:"action"`
 	// Value is the value used/extracted (fill value, extracted text, URL).
@@ -477,6 +480,7 @@ func lastURL(results []explain.ExecutionResult) string {
 func outcomeFrom(res explain.ExecutionResult, execErr error) StepOutcome {
 	out := StepOutcome{
 		OK:     execErr == nil,
+		Step:   res.Step,
 		Action: res.ActionPerformed,
 		Value:  res.ActionValue,
 		URL:    res.PageURL,

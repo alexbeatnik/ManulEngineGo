@@ -92,8 +92,9 @@ func TestRenderForLLM(t *testing.T) {
 	if !strings.Contains(out, "[Main] (5 items)") {
 		t.Errorf("group count should reflect kept+truncated (3+2=5): %q", out)
 	}
-	if !strings.Contains(out, "- First video [link]") {
-		t.Errorf("missing element line: %q", out)
+	// Labels are quoted (copy-pastable) and carry the DSL verb for the role.
+	if !strings.Contains(out, "- 'First video' [link — CLICK]") {
+		t.Errorf("missing quoted element line with action verb: %q", out)
 	}
 	if strings.Contains(out, "Third video") {
 		t.Errorf("display cap of 2 not applied: %q", out)
@@ -104,5 +105,35 @@ func TestRenderForLLM(t *testing.T) {
 	}
 	if strings.Contains(out, "[Empty]") {
 		t.Errorf("empty group should be skipped: %q", out)
+	}
+	// The header tells the model how to use the list, and the URL grounds it.
+	if !strings.Contains(out, "EXACT text in quotes") {
+		t.Errorf("usage header missing: %q", out)
+	}
+	if !strings.Contains(out, "Current page: https://example.com") {
+		t.Errorf("page URL missing: %q", out)
+	}
+}
+
+func TestRenderForLLM_RoleVerbs(t *testing.T) {
+	pm := PageMap{Groups: []MapGroup{{
+		Name: "Form",
+		Elements: []MapElement{
+			{Label: "Search", Role: "textbox"},
+			{Label: "Country", Role: "combobox"},
+			{Label: "Subscribe", Role: "checkbox"},
+			{Label: "Submit", Role: "button"},
+		},
+	}}}
+	out := pm.RenderForLLM(0)
+	for _, want := range []string{
+		"'Search' [textbox — FILL]",
+		"'Country' [combobox — SELECT]",
+		"'Subscribe' [checkbox — CHECK]",
+		"'Submit' [button — CLICK]",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
 	}
 }
