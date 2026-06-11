@@ -110,7 +110,13 @@ func LaunchChrome(ctx context.Context, opts ChromeOptions) (*ChromeProcess, erro
 		args = append(args, "--headless=new")
 	}
 
-	cmd := exec.CommandContext(ctx, chromePath, args...)
+	// Chrome must outlive ctx: the caller's context typically scopes one task
+	// (a single prompt/pipeline turn in an embedding app), while the browser is
+	// a long-lived resource shared across tasks. exec.CommandContext would kill
+	// Chrome the moment that context is cancelled — the user watched the browser
+	// close seconds after every action that had launched it. ctx still bounds
+	// the startup phase (waitForCDP below); after that only Close kills Chrome.
+	cmd := exec.Command(chromePath, args...)
 	// Detach stdout/stderr — Chrome is noisy by default.
 	cmd.Stdout = nil
 	cmd.Stderr = nil
