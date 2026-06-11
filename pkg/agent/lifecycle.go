@@ -34,6 +34,23 @@ func Connect(ctx context.Context, opts Options) (*Session, error) {
 	return Launch(ctx, opts)
 }
 
+// Alive reports whether this Session's Chrome still answers on its CDP
+// endpoint. A long-lived Session can outlive Chrome — the user closes the
+// window, the process crashes — after which every call fails at the transport
+// with connection-refused. An embedding app that caches one Session should
+// check Alive before reuse and Connect afresh when it returns false. A closed
+// Session is never alive; the probe is the same /json/version signal Connect
+// uses to decide attach-vs-launch.
+func (s *Session) Alive(ctx context.Context) bool {
+	s.mu.Lock()
+	closed, endpoint := s.closed, s.endpoint
+	s.mu.Unlock()
+	if closed || endpoint == "" {
+		return false
+	}
+	return cdpReachable(ctx, endpoint)
+}
+
 // cdpReachable reports whether a Chrome DevTools HTTP endpoint answers at
 // <endpoint>/json/version within a short timeout. This is the same signal the
 // CDP transport relies on, checked without opening a WebSocket.

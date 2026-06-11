@@ -52,6 +52,49 @@ func TestDiffPageState(t *testing.T) {
 	}
 }
 
+// TestAlive covers the dead-Chrome detection an embedding app relies on to
+// know when its cached Session must be reconnected: alive while the endpoint
+// answers, dead once Chrome is gone (user closed the window), and never alive
+// without an endpoint or after Close.
+func TestAlive(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/json/version" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	sess := newTestSession(&runtime.MockPage{URL: "https://example.com"})
+	if sess.Alive(context.Background()) {
+		t.Errorf("session without an endpoint must not be alive")
+	}
+
+	sess.endpoint = srv.URL
+	if !sess.Alive(context.Background()) {
+		t.Errorf("expected alive while endpoint %s answers", srv.URL)
+	}
+
+	srv.Close() // Chrome "exits": the endpoint stops answering
+	if sess.Alive(context.Background()) {
+		t.Errorf("expected dead once the endpoint stops answering")
+	}
+}
+
+func TestAlive_ClosedSession(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	sess := newTestSession(&runtime.MockPage{URL: "https://example.com"})
+	sess.endpoint = srv.URL
+	_ = sess.Close()
+	if sess.Alive(context.Background()) {
+		t.Errorf("closed session must not be alive even with a live endpoint")
+	}
+}
+
 func TestCDPReachable(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/json/version" {
