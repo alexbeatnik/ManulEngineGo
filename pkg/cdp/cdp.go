@@ -3,9 +3,6 @@
 // This package implements the low-level WebSocket messenger and the
 // command-level CDP calls (Navigate, Evaluate, Click, etc.) used by
 // pkg/browser/cdp_backend.go.
-//
-// STATUS: Implementation in progress. The API shape is frozen; the
-// underlying WebSocket transport is being implemented.
 package cdp
 
 import (
@@ -41,6 +38,13 @@ type KeyEventParams struct {
 	Code                  string `json:"code,omitempty"`
 	WindowsVirtualKeyCode int    `json:"windowsVirtualKeyCode,omitempty"`
 	Modifiers             int    `json:"modifiers,omitempty"`
+	// Text/UnmodifiedText carry the character a keyDown produces. Chrome
+	// treats a keyDown WITHOUT text as a rawKeyDown: no keypress event fires,
+	// so Enter does not submit forms and printable keys type nothing. Senders
+	// must set both for character-producing keys (Enter → "\r") and clear them
+	// on the matching keyUp.
+	Text           string `json:"text,omitempty"`
+	UnmodifiedText string `json:"unmodifiedText,omitempty"`
 }
 
 // ── CDP Commands ───────────────────────────────────────────────────────────────
@@ -81,13 +85,8 @@ func Evaluate(ctx context.Context, c *Conn, expression string) (interface{}, err
 
 // CallFunctionOn calls a JS function string with a JSON-serialized argument.
 func CallFunctionOn(ctx context.Context, c *Conn, objectId string, arg interface{}) (interface{}, error) {
-	args := []map[string]interface{}{}
-	if arg != nil {
-		args = append(args, map[string]interface{}{"value": arg})
-	}
-
-	// If objectId was meant to be a real remote object ID, we could pass it.
-	// We'll evaluate it unconditionally in the default context:
+	// objectId is the function source; it is evaluated (and, with an arg,
+	// invoked) in the default execution context.
 	var expr string
 	if arg == nil {
 		expr = objectId

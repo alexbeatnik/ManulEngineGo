@@ -1,7 +1,4 @@
 // Package runtime implements the ManulHeart DSL execution engine.
-//
-// STATUS: Stub package. The full implementation will live here once the
-// CDP backend (pkg/cdp) is production-ready.
 package runtime
 
 import (

@@ -703,10 +703,14 @@ var stopWords = map[string]bool{
 }
 
 // SignificantWords returns query words with length ≥ 2 and not a stop word.
+// Length is counted in runes, not bytes: a single Cyrillic letter is 2 bytes,
+// so a byte-length check let one-letter Ukrainian/Russian function words
+// («і», «в», «з», «у») through as "significant" and diluted word-overlap
+// scores on non-Latin queries.
 func SignificantWords(s string) []string {
 	var words []string
 	for _, w := range strings.Fields(s) {
-		if len(w) >= 2 && !stopWords[w] {
+		if len([]rune(w)) >= 2 && !stopWords[w] {
 			words = append(words, w)
 		}
 	}

@@ -311,15 +311,115 @@ func (p *CDPPage) GetElementCenter(ctx context.Context, id int, xpath string) (f
 }
 
 func (p *CDPPage) DispatchKey(ctx context.Context, key string, modifiers int) error {
+	key = normalizeKeyName(key)
 	params := cdp.KeyEventParams{
 		Key:                   key,
+		Code:                  keyToCode(key),
 		WindowsVirtualKeyCode: keyToVirtualCode(key),
 		Modifiers:             modifiers,
+	}
+	// Character-producing keys must carry text on keyDown: Chrome treats a
+	// keyDown without text as a rawKeyDown — no keypress fires, so PRESS Enter
+	// never submitted forms on sites that listen for keypress/submit (the
+	// "search stayed on the homepage" failure), and printable keys typed
+	// nothing. The matching keyUp must NOT carry text.
+	if text := keyText(key); text != "" {
+		params.Text = text
+		params.UnmodifiedText = text
 	}
 	if err := cdp.DispatchKeyEvent(ctx, p.conn, "keyDown", params); err != nil {
 		return err
 	}
+	params.Text = ""
+	params.UnmodifiedText = ""
 	return cdp.DispatchKeyEvent(ctx, p.conn, "keyUp", params)
+}
+
+// normalizeKeyName maps the spellings agents/LLMs actually emit ("enter",
+// "ESC", "Return", "space") to the canonical DOM KeyboardEvent.key values
+// Chrome expects. Unknown names pass through unchanged.
+func normalizeKeyName(key string) string {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "enter", "return":
+		return "Enter"
+	case "esc", "escape":
+		return "Escape"
+	case "tab":
+		return "Tab"
+	case "space", "spacebar":
+		return " "
+	case "backspace":
+		return "Backspace"
+	case "delete", "del":
+		return "Delete"
+	case "up", "arrowup":
+		return "ArrowUp"
+	case "down", "arrowdown":
+		return "ArrowDown"
+	case "left", "arrowleft":
+		return "ArrowLeft"
+	case "right", "arrowright":
+		return "ArrowRight"
+	case "home":
+		return "Home"
+	case "end":
+		return "End"
+	case "pageup", "page up":
+		return "PageUp"
+	case "pagedown", "page down":
+		return "PageDown"
+	}
+	return strings.TrimSpace(key)
+}
+
+// keyText returns the character a key produces ("" for non-printing keys).
+// Sent as keyDown text so Chrome generates the keypress/beforeinput events
+// that form submission and typing depend on.
+func keyText(key string) string {
+	switch key {
+	case "Enter":
+		return "\r"
+	case " ":
+		return " "
+	}
+	if len([]rune(key)) == 1 {
+		return key
+	}
+	return ""
+}
+
+// keyToCode maps canonical key values to KeyboardEvent.code values for the
+// common keys agents press. Unknown keys return "" (Chrome tolerates that).
+func keyToCode(key string) string {
+	switch key {
+	case "Enter":
+		return "Enter"
+	case "Tab":
+		return "Tab"
+	case "Escape":
+		return "Escape"
+	case " ":
+		return "Space"
+	case "Backspace":
+		return "Backspace"
+	case "Delete":
+		return "Delete"
+	case "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+		"Home", "End", "PageUp", "PageDown":
+		return key
+	}
+	if len(key) == 1 {
+		c := key[0]
+		switch {
+		case c >= 'a' && c <= 'z':
+			return "Key" + string(c-32)
+		case c >= 'A' && c <= 'Z':
+			return "Key" + string(c)
+		case c >= '0' && c <= '9':
+			return "Digit" + string(c)
+		}
+	}
+	return ""
 }
 
 // keyToVirtualCode maps common key names to Windows virtual key codes.
@@ -328,17 +428,22 @@ func keyToVirtualCode(key string) int {
 		"Enter": 13, "Tab": 9, "Escape": 27, "Backspace": 8,
 		"Delete": 46, "ArrowUp": 38, "ArrowDown": 40,
 		"ArrowLeft": 37, "ArrowRight": 39, "Home": 36, "End": 35,
-		"PageUp": 33, "PageDown": 34, "Space": 32, "F1": 112,
+		"PageUp": 33, "PageDown": 34, " ": 32, "F1": 112,
 		"F2": 113, "F3": 114, "F4": 115, "F5": 116, "F6": 117,
 		"F7": 118, "F8": 119, "F9": 120, "F10": 121, "F11": 122, "F12": 123,
-		"a": 65, "b": 66, "c": 67, "v": 86, "x": 88, "z": 90,
 	}
 	if code, ok := codes[key]; ok {
 		return code
 	}
-	// Default: try first character as uppercase ASCII
-	if len(key) == 1 && key[0] >= 'a' && key[0] <= 'z' {
-		return int(key[0]) - 32
+	// Printable ASCII: virtual key code is the uppercase character.
+	if len(key) == 1 {
+		c := key[0]
+		switch {
+		case c >= 'a' && c <= 'z':
+			return int(c) - 32
+		case c >= 'A' && c <= 'Z' || c >= '0' && c <= '9':
+			return int(c)
+		}
 	}
 	return 0
 }
