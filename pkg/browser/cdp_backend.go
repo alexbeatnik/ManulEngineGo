@@ -162,7 +162,103 @@ func (b *CDPBrowser) Close() error { return nil }
 
 // CDPPage is the CDP implementation of Page.
 type CDPPage struct {
-	conn *cdp.Conn
+	conn    *cdp.Conn
+	tracker *cdp.FrameTracker
+}
+
+// ensureTracker lazily enables the Page/Runtime domains and starts tracking
+// per-frame execution contexts. Done on first use so simple one-shot pages
+// don't pay for event subscription they never need.
+func (p *CDPPage) ensureTracker(ctx context.Context) (*cdp.FrameTracker, error) {
+	if p.tracker != nil {
+		return p.tracker, nil
+	}
+	t, err := cdp.NewFrameTracker(ctx, p.conn)
+	if err != nil {
+		return nil, err
+	}
+	p.tracker = t
+	return t, nil
+}
+
+// Frames returns the page's frames (main + iframes) with their execution contexts.
+func (p *CDPPage) Frames(ctx context.Context) ([]FrameRef, error) {
+	t, err := p.ensureTracker(ctx)
+	if err != nil {
+		return nil, err
+	}
+	frames := t.Frames()
+	out := make([]FrameRef, 0, len(frames))
+	for _, f := range frames {
+		out = append(out, FrameRef{Index: f.Index, URL: f.URL, Name: f.Name})
+	}
+	return out, nil
+}
+
+// EvalJSInFrame evaluates expr in the execution context of frame frameIndex.
+func (p *CDPPage) EvalJSInFrame(ctx context.Context, frameIndex int, expr string) ([]byte, error) {
+	if frameIndex == 0 {
+		return p.EvalJS(ctx, expr)
+	}
+	t, err := p.ensureTracker(ctx)
+	if err != nil {
+		return nil, err
+	}
+	contextID := t.ContextForIndex(frameIndex)
+	wrapped := autoInvoke(expr)
+	raw, err := cdp.EvaluateInContext(ctx, p.conn, contextID, wrapped)
+	if err != nil {
+		return nil, err
+	}
+	return marshalEvalResult(raw)
+}
+
+// CallProbeInFrame calls a JS arrow-function with a JSON arg in frame frameIndex.
+func (p *CDPPage) CallProbeInFrame(ctx context.Context, frameIndex int, fn string, arg any) ([]byte, error) {
+	if frameIndex == 0 {
+		return p.CallProbe(ctx, fn, arg)
+	}
+	t, err := p.ensureTracker(ctx)
+	if err != nil {
+		return nil, err
+	}
+	contextID := t.ContextForIndex(frameIndex)
+	expr := fn
+	if arg != nil {
+		expr = fmt.Sprintf("(%s)(%s)", fn, cdp.MustMarshalString(arg))
+	} else {
+		expr = autoInvoke(fn)
+	}
+	raw, err := cdp.EvaluateInContext(ctx, p.conn, contextID, expr)
+	if err != nil {
+		return nil, err
+	}
+	return marshalEvalResult(raw)
+}
+
+// autoInvoke wraps a bare arrow/function literal so it is executed, mirroring
+// CDPPage.EvalJS's behaviour for the per-frame path.
+func autoInvoke(expr string) string {
+	trimmed := strings.TrimSpace(expr)
+	if strings.HasPrefix(trimmed, "() =>") || strings.HasPrefix(trimmed, "()=>") ||
+		strings.HasPrefix(trimmed, "function") {
+		return "(" + trimmed + ")()"
+	}
+	return expr
+}
+
+func marshalEvalResult(raw interface{}) ([]byte, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	switch v := raw.(type) {
+	case []byte:
+		return v, nil
+	case string:
+		return []byte(v), nil
+	default:
+		return json.Marshal(v)
+	}
 }
 
 func (p *CDPPage) Navigate(ctx context.Context, url string) error {

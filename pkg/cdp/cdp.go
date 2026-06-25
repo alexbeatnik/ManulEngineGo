@@ -83,6 +83,37 @@ func Evaluate(ctx context.Context, c *Conn, expression string) (interface{}, err
 	return wrap.Result.Value, nil
 }
 
+// EvaluateInContext runs JavaScript in a specific execution context (frame).
+// contextID == 0 falls back to the default/main context (plain Evaluate), so
+// callers can pass a frame's context id unconditionally.
+func EvaluateInContext(ctx context.Context, c *Conn, contextID int, expression string) (interface{}, error) {
+	if contextID == 0 {
+		return Evaluate(ctx, c, expression)
+	}
+	res, err := c.Call(ctx, "Runtime.evaluate", map[string]interface{}{
+		"expression":    expression,
+		"returnByValue": true,
+		"awaitPromise":  true,
+		"contextId":     contextID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var wrap struct {
+		Result struct {
+			Value interface{} `json:"value"`
+		} `json:"result"`
+		ExceptionDetails interface{} `json:"exceptionDetails"`
+	}
+	if err := json.Unmarshal(res, &wrap); err != nil {
+		return nil, fmt.Errorf("unmarshal evaluate result: %w", err)
+	}
+	if wrap.ExceptionDetails != nil {
+		return nil, fmt.Errorf("js exception: %v", wrap.ExceptionDetails)
+	}
+	return wrap.Result.Value, nil
+}
+
 // CallFunctionOn calls a JS function string with a JSON-serialized argument.
 func CallFunctionOn(ctx context.Context, c *Conn, objectId string, arg interface{}) (interface{}, error) {
 	// objectId is the function source; it is evaluated (and, with an arg,

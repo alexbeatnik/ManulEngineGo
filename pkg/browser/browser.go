@@ -102,8 +102,29 @@ type Page interface {
 	// navigation or network idle. Use context deadline for hard timeout.
 	Wait(ctx context.Context, duration time.Duration) error
 
+	// Frames returns the page's frames (main + iframes) with their per-frame
+	// JavaScript execution contexts. Index 0 is the main frame.
+	Frames(ctx context.Context) ([]FrameRef, error)
+
+	// EvalJSInFrame evaluates an expression in the execution context of the
+	// frame at frameIndex (0 == main frame). It is the per-frame counterpart
+	// of EvalJS and is what makes iframe content reachable.
+	EvalJSInFrame(ctx context.Context, frameIndex int, expr string) ([]byte, error)
+
+	// CallProbeInFrame calls a serialized JS arrow-function with a JSON arg in
+	// the frame at frameIndex (0 == main frame). Per-frame counterpart of CallProbe.
+	CallProbeInFrame(ctx context.Context, frameIndex int, fn string, arg any) ([]byte, error)
+
 	// Close closes the page/tab (does not close the browser).
 	Close() error
+}
+
+// FrameRef identifies one frame (main document or iframe) and the index used to
+// route per-frame evaluation. Index 0 is always the main frame.
+type FrameRef struct {
+	Index int
+	URL   string
+	Name  string
 }
 
 // Browser is the abstract interface for a browser connection.
