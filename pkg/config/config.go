@@ -297,6 +297,14 @@ func overrideFromEnv(cfg *Config) {
 			cfg.DisableCache = b
 		}
 	}
+	if v := os.Getenv("MANUL_SEMANTIC_CACHE_ENABLED"); v != "" {
+		// ManulEngine parity: the inverse control — disabling the cache is
+		// equivalent to DisableCache=true. Read after MANUL_DISABLE_CACHE so
+		// the explicit semantic-cache toggle wins if both are set.
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.DisableCache = !b
+		}
+	}
 	if v := os.Getenv("MANUL_TAGS"); v != "" {
 		cfg.Tags = splitCSV(v)
 	}
