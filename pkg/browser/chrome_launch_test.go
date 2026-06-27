@@ -22,7 +22,7 @@ func TestLaunchChrome_SurvivesContextCancel(t *testing.T) {
 	if os.Getenv("MANUL_TEST_LAUNCH") == "" {
 		t.Skip("set MANUL_TEST_LAUNCH=1 to run (spawns a real headless Chrome)")
 	}
-	if _, err := findChrome(); err != nil {
+	if _, err := findChrome(""); err != nil {
 		t.Skipf("no chrome binary: %v", err)
 	}
 

@@ -1,8 +1,11 @@
 # EXTENSION_ENGINE_CONTRACT
 
 This document specifies the runtime contract between the ManulEngine VS Code
-extension (TypeScript) and the backing CLI engine (currently Python,
-`manul-engine`; target rewrite: Go, `ManulHeart`).
+extension (TypeScript) and the backing CLI engine. It is implemented by **both**
+runtimes — ManulEngine (Python, `manul-engine`) and ManulHeart (Go, `ManulHeart`)
+— which expose the same `manul` CLI surface, argv shapes, env vars,
+stdout/stdin debug protocol, and exit-code semantics. Kept in sync across both
+engine repos and the extension.
 
 Every behavior below was extracted directly from the extension's source tree
 under [src/](src/). For any new engine implementation, preserving the argv
@@ -14,7 +17,8 @@ the engine deviates.
 The extension pins an exact minimum engine version:
 
 ```
-MIN_MANUL_ENGINE_VERSION = "0.0.9.29"   // src/shared/index.ts:5
+MIN_MANUL_ENGINE_VERSION = "0.0.9.30"   // src/shared/index.ts:5
+MIN_MANUL_HEART_VERSION  = "0.0.1.1"    // src/shared/index.ts:6
 ```
 
 The version-check path parses the first `\d+(?:\.\d+)+` run out of `manul --version`

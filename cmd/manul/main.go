@@ -172,6 +172,7 @@ func cmdRun(args []string) error {
 	screenshot := fs.String("screenshot", "on-fail", "screenshot mode: none, on-fail, always")
 	htmlReport := fs.Bool("html-report", false, "generate HTML report after run (default off; opt-in)")
 	executablePath := fs.String("executable-path", "", "absolute path to a custom browser or Electron app executable")
+	channel := fs.String("channel", "", "system Chrome/Chromium channel to launch (chrome, chrome-beta, chromium, msedge)")
 	tags := fs.String("tags", "", "comma-separated tags to filter hunt files")
 	retries := fs.Int("retries", 0, "number of retries for failed steps")
 	disableCache := fs.Bool("disable-cache", false, "disable DOM snapshot caching")
@@ -276,6 +277,11 @@ func cmdRun(args []string) error {
 	}
 	cfg.Retries = *retries
 	cfg.DisableCache = *disableCache
+	// CLI --channel wins over JSON/env (MANUL_CHANNEL).
+	if *channel != "" {
+		c := *channel
+		cfg.Channel = &c
+	}
 	// CLI --workers wins over JSON/env (MANUL_WORKERS). Default 1 = sequential;
 	// >1 routes multi-file/dir runs through runParallel + pkg/worker.WorkerPool.
 	if *workers != 1 {
@@ -452,6 +458,9 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, op
 		opts.Headless = cfg.Headless
 		if executablePath != "" {
 			opts.ExecutablePath = executablePath
+		}
+		if cfg.Channel != nil && *cfg.Channel != "" {
+			opts.Channel = *cfg.Channel
 		}
 		logger.Info("Launching Chrome (port %d, profile %s)…", opts.Port, opts.UserDataDir)
 		var err error
@@ -1104,6 +1113,7 @@ Core Flags:
   --html-report       Generate HTML report after the run (default: true)
   --explain           Show targeting candidates (explain mode)
   --executable-path   Absolute path to a custom browser or Electron app executable
+  --channel           System Chrome/Chromium channel to launch (chrome, chrome-beta, chromium, msedge)
 
 Daemon Flags:
   --headless          Run browser in headless mode

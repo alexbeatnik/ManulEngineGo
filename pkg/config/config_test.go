@@ -418,6 +418,12 @@ func TestOverrideFromEnv(t *testing.T) {
 			"TestsHome mismatch",
 		},
 		{
+			"channel (ManulEngine parity)",
+			"MANUL_CHANNEL", "chrome",
+			func(c Config) bool { return c.Channel != nil && *c.Channel == "chrome" },
+			"MANUL_CHANNEL should set Channel",
+		},
+		{
 			"auto annotate",
 			"MANUL_AUTO_ANNOTATE", "true",
 			func(c Config) bool { return c.AutoAnnotate },

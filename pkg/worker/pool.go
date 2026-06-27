@@ -189,6 +189,12 @@ func RunHuntsInParallel(ctx context.Context, cfg config.Config, hunts []*dsl.Hun
 	alloc := NewPortAllocator(9222, 9222+concurrency*2)
 	chromeOpts := browser.DefaultChromeOptions()
 	chromeOpts.Headless = cfg.Headless
+	if cfg.Channel != nil && *cfg.Channel != "" {
+		chromeOpts.Channel = *cfg.Channel
+	}
+	if cfg.ExecutablePath != nil && *cfg.ExecutablePath != "" {
+		chromeOpts.ExecutablePath = *cfg.ExecutablePath
+	}
 	pool, err := NewPool(PoolOptions{
 		Concurrency:   concurrency,
 		Config:        cfg,

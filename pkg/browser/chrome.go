@@ -37,6 +37,20 @@ type ChromeOptions struct {
 	Headless bool
 	// ExecutablePath overrides the Chrome binary location.
 	ExecutablePath string
+	// Channel selects a system Chrome/Chromium binary by name (chrome,
+	// chrome-beta, chrome-dev, chromium, msedge). Empty = platform defaults.
+	// Mirrors ManulEngine's `channel` / MANUL_CHANNEL.
+	Channel string
+}
+
+// channelBinaries maps a channel name to the concrete binaries to probe (in
+// order). Mirrors ManulEngine's _CHANNEL_BINARIES.
+var channelBinaries = map[string][]string{
+	"chrome":      {"google-chrome-stable", "google-chrome"},
+	"chrome-beta": {"google-chrome-beta"},
+	"chrome-dev":  {"google-chrome-unstable"},
+	"chromium":    {"chromium", "chromium-browser"},
+	"msedge":      {"microsoft-edge-stable", "microsoft-edge"},
 }
 
 // DefaultChromeOptions returns sensible defaults for automation.
@@ -57,7 +71,7 @@ func LaunchChrome(ctx context.Context, opts ChromeOptions) (*ChromeProcess, erro
 	chromePath := opts.ExecutablePath
 	if chromePath == "" {
 		var err error
-		chromePath, err = findChrome()
+		chromePath, err = findChrome(opts.Channel)
 		if err != nil {
 			return nil, err
 		}
@@ -153,29 +167,37 @@ func (cp *ChromeProcess) Endpoint() string {
 }
 
 // findChrome searches for a Chrome binary in common locations.
-func findChrome() (string, error) {
+func findChrome(channel string) (string, error) {
 	var candidates []string
+	// Channel-selected binaries take precedence over platform defaults.
+	if channel != "" {
+		if bins, ok := channelBinaries[strings.ToLower(channel)]; ok {
+			candidates = append(candidates, bins...)
+		} else {
+			candidates = append(candidates, channel) // treat as a bare binary name
+		}
+	}
 	switch runtime.GOOS {
 	case "linux":
-		candidates = []string{
+		candidates = append(candidates,
 			"google-chrome-stable",
 			"google-chrome",
 			"chromium-browser",
 			"chromium",
-		}
+		)
 	case "darwin":
-		candidates = []string{
+		candidates = append(candidates,
 			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 			"google-chrome",
 			"chromium",
-		}
+		)
 	case "windows":
-		candidates = []string{
+		candidates = append(candidates,
 			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
 			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
-		}
+		)
 	default:
-		candidates = []string{"google-chrome", "chromium"}
+		candidates = append(candidates, "google-chrome", "chromium")
 	}
 
 	for _, c := range candidates {
