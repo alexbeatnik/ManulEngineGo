@@ -388,6 +388,30 @@ func (rt *Runtime) resolveStructuralAnchor(label string, elements []dom.ElementS
 }
 
 // executeCommand runs a single DSL command and returns its execution result.
+// screenshotSlug turns an optional SCREENSHOT label into a filesystem-safe base
+// name (no extension). Mirrors ManulEngine's extract_screenshot_name.
+func screenshotSlug(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimSuffix(strings.TrimSuffix(s, ".png"), ".PNG")
+	var b strings.Builder
+	prevDisallowed := false
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+			b.WriteRune(r)
+			prevDisallowed = false
+		default:
+			// Collapse a run of disallowed chars into a single '_' (mirrors
+			// ManulEngine's [^A-Za-z0-9._-]+ → '_' substitution).
+			if !prevDisallowed {
+				b.WriteRune('_')
+				prevDisallowed = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "_")
+}
+
 func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res explain.ExecutionResult, err error) {
 	start := time.Now()
 	res = explain.ExecutionResult{
@@ -457,6 +481,30 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 		text := rt.resolveVariables(cmd.PrintText)
 		res.ActionValue = text
 		rt.logger.ActionDetail("📢", "PRINT: %s", text)
+
+	case dsl.CmdScreenshot:
+		// Capture a full-page PNG on demand into screenshots/<name>.png under
+		// the CWD (auto-named when no label). Matches ManulEngine's SCREENSHOT.
+		name := screenshotSlug(rt.resolveVariables(cmd.ScreenshotName))
+		if name == "" {
+			name = fmt.Sprintf("screenshot_%d", time.Now().UnixMilli())
+		}
+		var data []byte
+		if data, err = rt.page.Screenshot(ctx); err != nil {
+			err = fmt.Errorf("screenshot: %w", err)
+			break
+		}
+		if err = os.MkdirAll("screenshots", 0o755); err != nil {
+			err = fmt.Errorf("screenshot dir: %w", err)
+			break
+		}
+		outPath := filepath.Join("screenshots", name+".png")
+		if err = os.WriteFile(outPath, data, 0o644); err != nil {
+			err = fmt.Errorf("screenshot write: %w", err)
+			break
+		}
+		res.ActionValue = outPath
+		rt.logger.ActionDetail("📸", "SCREENSHOT: %s", outPath)
 
 	case dsl.CmdWaitForResponse:
 		pattern := rt.resolveVariables(cmd.WaitResponseURL)

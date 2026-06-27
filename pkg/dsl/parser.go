@@ -190,6 +190,9 @@ type Command struct {
 	// PrintText is the text to print for PRINT commands.
 	PrintText string
 
+	// ScreenshotName is the optional file label for SCREENSHOT commands.
+	ScreenshotName string
+
 	// CallStepName is the step block name to call for CALL_STEP commands.
 	CallStepName string
 	// GoCallName is the registered handler name for CALL GO commands.
@@ -917,6 +920,7 @@ func parseCommandLine(line string) Command {
 	// ── SCREENSHOT ────────────────────────────────────────────────────────────
 	case strings.HasPrefix(upper, "SCREENSHOT"):
 		cmd.Type = CmdScreenshot
+		cmd.ScreenshotName = unquote(strings.TrimSpace(line[len("SCREENSHOT"):]))
 
 	// ── HIGHLIGHT ─────────────────────────────────────────────────────────────
 	case strings.HasPrefix(upper, "HIGHLIGHT "):
