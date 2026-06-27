@@ -170,12 +170,12 @@ func cmdRun(args []string) error {
 	debug := fs.Bool("debug", false, "enable debug mode (pause on each step)")
 	explainMode := fs.Bool("explain", false, "enable explain mode (show targeting candidates)")
 	screenshot := fs.String("screenshot", "on-fail", "screenshot mode: none, on-fail, always")
-	htmlReport := fs.Bool("html-report", true, "generate HTML report after run")
+	htmlReport := fs.Bool("html-report", false, "generate HTML report after run (default off; opt-in)")
 	executablePath := fs.String("executable-path", "", "absolute path to a custom browser or Electron app executable")
 	tags := fs.String("tags", "", "comma-separated tags to filter hunt files")
 	retries := fs.Int("retries", 0, "number of retries for failed steps")
 	disableCache := fs.Bool("disable-cache", false, "disable DOM snapshot caching")
-	_ = fs.Int("workers", 1, "number of parallel workers (placeholder for compatibility)")
+	workers := fs.Int("workers", 1, "number of parallel hunt workers (pool mode for multi-file/dir runs)")
 	_ = fs.String("browser", "chromium", "browser type (default: chromium)")
 	breakLinesStr := fs.String("break-lines", "", "comma-separated line numbers to pause on (debugging)")
 	showVersion := fs.Bool("version", false, "show engine version and exit")
@@ -261,9 +261,26 @@ func cmdRun(args []string) error {
 	if *screenshot != "none" {
 		cfg.Screenshot = *screenshot
 	}
-	cfg.HTMLReport = *htmlReport
+	// Only let --html-report override config/env when the user passed it
+	// explicitly; otherwise honour JSON/MANUL_HTML_REPORT (default off, opt-in,
+	// matching ManulEngine and the daemon subcommand). The flag default `true`
+	// previously clobbered config silently.
+	htmlReportSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "html-report" {
+			htmlReportSet = true
+		}
+	})
+	if htmlReportSet {
+		cfg.HTMLReport = *htmlReport
+	}
 	cfg.Retries = *retries
 	cfg.DisableCache = *disableCache
+	// CLI --workers wins over JSON/env (MANUL_WORKERS). Default 1 = sequential;
+	// >1 routes multi-file/dir runs through runParallel + pkg/worker.WorkerPool.
+	if *workers != 1 {
+		cfg.Workers = *workers
+	}
 	if *tags != "" {
 		cfg.Tags = strings.Split(*tags, ",")
 		for i := range cfg.Tags {
@@ -878,7 +895,7 @@ func cmdDaemon(args []string) error {
 	fs := flag.NewFlagSet("daemon", flag.ExitOnError)
 	headless := fs.Bool("headless", false, "run browser in headless mode")
 	verbose := fs.Bool("verbose", false, "enable verbose logging")
-	browserType := fs.String("browser", "chromium", "browser engine (chromium, firefox, webkit)")
+	browserType := fs.String("browser", "chromium", "browser engine (chromium; CDP-only — attach to other browsers via --cdp/--executable-path)")
 	screenshot := fs.String("screenshot", "on-fail", "screenshot mode: none, on-fail, always")
 	htmlReport := fs.Bool("html-report", false, "generate HTML report after each run")
 	if err := fs.Parse(args); err != nil {
