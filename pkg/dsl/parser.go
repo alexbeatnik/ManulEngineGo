@@ -23,6 +23,7 @@ type CommandType string
 
 const (
 	CmdNavigate        CommandType = "NAVIGATE"
+	CmdOpenApp         CommandType = "OPEN_APP"
 	CmdClick           CommandType = "CLICK"
 	CmdDoubleClick     CommandType = "DOUBLE_CLICK"
 	CmdRightClick      CommandType = "RIGHT_CLICK"
@@ -670,6 +671,13 @@ func parseCommandLine(line string) Command {
 		cmd.Type = CmdNavigate
 		raw := stripPrefix(line, "NAVIGATE TO ", "NAVIGATE ")
 		cmd.URL = unquote(raw)
+
+	// ── OPEN APP ──────────────────────────────────────────────────────────────
+	// Desktop/Electron entry point. ManulEngine launches+attaches; in ManulHeart
+	// the app window is already attached at launch (--executable-path / --cdp),
+	// so OPEN APP is a readiness checkpoint on the current window.
+	case upper == "OPEN APP" || strings.HasPrefix(upper, "OPEN APP "):
+		cmd.Type = CmdOpenApp
 
 	// ── DOUBLE CLICK ──────────────────────────────────────────────────────────
 	case strings.HasPrefix(upper, "DOUBLE CLICK "), strings.HasPrefix(upper, "DOUBLECLICK "):

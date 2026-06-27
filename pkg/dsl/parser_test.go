@@ -610,6 +610,15 @@ func TestParsePrint(t *testing.T) {
 	}
 }
 
+func TestParseOpenApp(t *testing.T) {
+	for _, line := range []string{"OPEN APP", "OPEN APP", "open app"} {
+		cmd := mustParseLine(t, line)
+		if cmd.Type != CmdOpenApp {
+			t.Errorf("parse %q: type = %s, want OPEN_APP", line, cmd.Type)
+		}
+	}
+}
+
 func TestParseScreenshot(t *testing.T) {
 	bare := mustParseLine(t, "SCREENSHOT")
 	if bare.Type != CmdScreenshot {

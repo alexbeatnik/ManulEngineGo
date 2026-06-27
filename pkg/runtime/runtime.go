@@ -453,6 +453,23 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 			}
 		}
 
+	case dsl.CmdOpenApp:
+		// The desktop/Electron window is already attached at launch (the page
+		// was selected via FirstPage/PageMatching). Treat OPEN APP as a
+		// readiness checkpoint on the current window: ensure it is loaded and
+		// report it. Mirrors ManulEngine's OPEN APP for the attach flow.
+		if err = rt.page.WaitForLoad(ctx); err != nil {
+			err = fmt.Errorf("open app: %w", err)
+			break
+		}
+		rt.invalidateSnapshot()
+		appURL, _ := rt.page.CurrentURL(ctx)
+		res.ActionValue = appURL
+		if appURL == "" {
+			appURL = "(no URL)"
+		}
+		rt.logger.ActionDetail("📦", "Attached to app window: %s", appURL)
+
 	case dsl.CmdWait:
 		err = rt.page.Wait(ctx, time.Duration(cmd.WaitSeconds*float64(time.Second)))
 
