@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
 )
 
 // ---- sanitizeFilename -------------------------------------------------------
@@ -86,7 +86,7 @@ func TestGenerateHTML_ContainsStepText(t *testing.T) {
 	content := string(data)
 
 	for _, needle := range []string{
-		"ManulHeart Report",
+		"ManulEngine (Go) Report",
 		"Smoke Test",
 		"smoke.hunt",
 		"Click Login",

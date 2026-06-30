@@ -1,4 +1,4 @@
-// Package scorer implements ManulHeart's deterministic multi-signal element scoring.
+// Package scorer implements ManulEngine (Go)'s deterministic multi-signal element scoring.
 //
 // The primary entry points are:
 //   - Score(query, typeHint, mode, el, anchor) → explain.ScoreBreakdown
@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
 )
 
 // ── Public types ──────────────────────────────────────────────────────────────

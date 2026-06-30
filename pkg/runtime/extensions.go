@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
 )
 
 type CustomControlInvocation struct {

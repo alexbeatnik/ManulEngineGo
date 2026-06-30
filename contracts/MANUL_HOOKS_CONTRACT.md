@@ -1,16 +1,16 @@
-# ManulHeart — Hooks & Lifecycle Contract
+# ManulEngine (Go) — Hooks & Lifecycle Contract
 
 > **Machine-readable contract for the hook system, Go extension registration, and variable scoping.**
-> Consumed by test framework integrations, CI/CD runners, and downstream tooling that extends ManulHeart's execution lifecycle.
+> Consumed by test framework integrations, CI/CD runners, and downstream tooling that extends ManulEngine (Go)'s execution lifecycle.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). The `.hunt`-level surface is **identical** — `[SETUP]`/`[TEARDOWN]`
 > blocks and the five-level variable scoping behave the same in both runtimes.
 > Two things differ and are reflected below: (1) the inline call verb is `CALL GO`
 > (resolving a handler registered via `RegisterGoCall`) instead of `CALL PYTHON`
-> importing a module; (2) ManulHeart has **no** suite-level lifecycle decorators
+> importing a module; (2) ManulEngine (Go) has **no** suite-level lifecycle decorators
 > (`@before_all`/`@after_all`/`@before_group`/`@after_group`) and **no**
-> `MANUL_GLOBAL_VARS` serialization — those are Engine-only. ManulHeart extends
+> `MANUL_GLOBAL_VARS` serialization — those are Engine-only. ManulEngine (Go) extends
 > the runtime through process-init Go registration (`RegisterGoCall` /
 > `RegisterCustomControl`) instead.
 
@@ -74,7 +74,7 @@
   },
 
   "goRegistration": {
-    "description": "ManulHeart extends the runtime through Go function registration at process init (main()/init()/TestMain), not through suite-level lifecycle decorators. This replaces ManulEngine's Python @before_all/@after_all/@before_group/@after_group hooks, which have no ManulHeart equivalent.",
+    "description": "ManulEngine (Go) extends the runtime through Go function registration at process init (main()/init()/TestMain), not through suite-level lifecycle decorators. This replaces ManulEngine's Python @before_all/@after_all/@before_group/@after_group hooks, which have no ManulEngine (Go) equivalent.",
 
     "registerGoCall": {
       "signature": "RegisterGoCall(name string, handler GoCallHandler) error",

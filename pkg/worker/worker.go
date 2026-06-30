@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
-	"github.com/alexbeatnik/ManulHeart/pkg/config"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
-	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
-	"github.com/alexbeatnik/ManulHeart/pkg/utils"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/config"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/utils"
 )
 
 // Worker owns exactly one Runtime, one Page, one Browser, and (optionally)

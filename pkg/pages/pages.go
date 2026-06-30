@@ -1,4 +1,4 @@
-// Package pages implements the ManulHeart page-name registry.
+// Package pages implements the ManulEngine (Go) page-name registry.
 //
 // It mirrors Python ManulEngine's pages/ directory system:
 //   - Per-site JSON fragments under <project>/pages/<safe_netloc>.json

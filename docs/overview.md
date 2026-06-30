@@ -1,4 +1,4 @@
-# ManulHeart — Architecture Overview
+# ManulEngine (Go) — Architecture Overview
 
 > *Why we built a pure Go/CDP runtime instead of wrapping Playwright.*
 
@@ -19,11 +19,11 @@ This architecture carries inherent costs:
 3. **Indirection and opacity.** When an element fails to resolve, you are debugging through three layers of abstraction: your test code → the driver library → the CDP protocol. Error messages are often unhelpful concatenations of framework + browser internals.
 4. **Selector fragility.** CSS selectors and XPath break on the slightest DOM refactor. They encode implementation detail, not user intent.
 
-ManulHeart removes every layer between your intent and the browser except the CDP wire itself.
+ManulEngine (Go) removes every layer between your intent and the browser except the CDP wire itself.
 
 ---
 
-## The ManulHeart Stack
+## The ManulEngine (Go) Stack
 
 ```
 Your .hunt file
@@ -46,7 +46,7 @@ Your .hunt file
           pkg/cdp.Conn  ──►  WebSocket to Chrome
 ```
 
-There is no Node.js process. There is no Python interpreter in the hot path. There is no browser driver binary. ManulHeart is a single compiled Go binary that opens a WebSocket to Chrome and speaks CDP directly.
+There is no Node.js process. There is no Python interpreter in the hot path. There is no browser driver binary. ManulEngine (Go) is a single compiled Go binary that opens a WebSocket to Chrome and speaks CDP directly.
 
 ---
 
@@ -136,7 +136,7 @@ Pass `--explain` to see candidate rankings in the terminal. Pass `--json` to get
 
 ## The 37-Field ElementSnapshot
 
-ManulHeart does not query the DOM incrementally. It queries once, exhaustively, and deserializes everything into a flat struct:
+ManulEngine (Go) does not query the DOM incrementally. It queries once, exhaustively, and deserializes everything into a flat struct:
 
 | Category | Fields |
 |----------|--------|
@@ -153,7 +153,7 @@ All 37 fields are populated in a single JS round-trip. The Go scorer then operat
 
 ## WorkerPool & True Concurrency
 
-Because ManulHeart is pure Go, it can run hunts in parallel using native goroutines — not processes, not threads fighting a GIL.
+Because ManulEngine (Go) is pure Go, it can run hunts in parallel using native goroutines — not processes, not threads fighting a GIL.
 
 ```
 WorkerPool (4 workers)
@@ -181,7 +181,7 @@ Returns per-hunt results in input order. Use `worker.NewPool` directly when you 
 
 ## CDP Transport (pkg/cdp)
 
-ManulHeart's CDP layer is a thin, race-safe WebSocket wrapper:
+ManulEngine (Go)'s CDP layer is a thin, race-safe WebSocket wrapper:
 
 - **Request/response pipelining** — per-call channels keyed by atomic JSON-RPC ID
 - **Event subscriptions** — `Subscribe()` returns a `*Subscription` with `C()` and `Close()`
@@ -213,7 +213,7 @@ The transport is ~300 lines. The domain helpers (`Navigate`, `Evaluate`, `Click`
 
 ## Why Pure Go / CDP Wins
 
-| Dimension | Playwright/Node.js | ManulHeart |
+| Dimension | Playwright/Node.js | ManulEngine (Go) |
 |-----------|-------------------|------------|
 | **Binary size** | ~180 MB (browsers + Node + bindings) | ~15 MB single static binary |
 | **Dependencies** | 500+ npm/pip packages | 1 (`gorilla/websocket`) |
@@ -223,4 +223,4 @@ The transport is ~300 lines. The domain helpers (`Navigate`, `Evaluate`, `Click`
 | **Selectors** | CSS/XPath (fragile) | Plain English + heuristics (robust) |
 | **Extensibility** | JavaScript/Python plugins | Native Go functions + registries |
 
-ManulHeart is not a wrapper around a wrapper. It is the automation engine, speaking directly to the browser, in a language designed for systems programming.
+ManulEngine (Go) is not a wrapper around a wrapper. It is the automation engine, speaking directly to the browser, in a language designed for systems programming.

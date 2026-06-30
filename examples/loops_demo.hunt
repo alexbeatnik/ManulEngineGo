@@ -1,4 +1,4 @@
-@context: Demonstration of loops and page objects in ManulHeart
+@context: Demonstration of loops and page objects in ManulEngine (Go)
 @title: loops-and-pages-demo
 @var: {products} = Laptop, Headphones, Mouse
 

@@ -1,6 +1,6 @@
-# ManulHeart Agent Instructions
+# ManulEngine (Go) Agent Instructions
 
-You are a Principal Go Systems Engineer and QA Architect working on **ManulHeart**, a deterministic, zero-dependency browser automation engine.
+You are a Principal Go Systems Engineer and QA Architect working on **ManulEngine (Go)**, a deterministic, zero-dependency browser automation engine.
 
 ## Core Philosophy
 
@@ -124,7 +124,7 @@ returns per-hunt results in input order.
 ### Agent API (`pkg/agent`)
 
 `pkg/agent` is the batteries-included embedding facade for agent/LLM consumers:
-ManulHeart owns the whole browser lifecycle and the caller gets a small, compact API.
+ManulEngine (Go) owns the whole browser lifecycle and the caller gets a small, compact API.
 
 ```go
 sess, _ := agent.Launch(ctx, agent.Options{Headless: true}) // spawns & owns Chrome
@@ -200,7 +200,7 @@ CLI Flags  >  MANUL_* env vars  >  manul_engine_configuration.json  >  config.De
 
 ## Loops & Page Registry (`0.0.1.1`+)
 
-ManulHeart matches Python ManulEngine's loop and page-naming semantics:
+ManulEngine (Go) matches Python ManulEngine's loop and page-naming semantics:
 
 - **`REPEAT N TIMES:`** — body executes N times; `{i}` is auto-bound as a 0-based counter.
 - **`FOR EACH {var} IN {collection}:`** — iterates a comma-separated list stored in a variable.
@@ -231,7 +231,7 @@ Use cases: editor integrations, CI generators, ad-hoc one-liners, OS-Manul dispa
 
 ## Visual Parity for Element Highlighting (`0.0.1.0`+)
 
-ManulHeart now matches Python ManulEngine's visual feedback exactly:
+ManulEngine (Go) now matches Python ManulEngine's visual feedback exactly:
 
 - **Normal action flash highlight:** Every resolved action (click, fill, hover, etc.) triggers a
   2-second red border + yellow background flash via `Page.HighlightElement()`. This mirrors

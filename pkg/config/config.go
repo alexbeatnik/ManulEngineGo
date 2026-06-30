@@ -1,4 +1,4 @@
-// Package config holds the engine-wide runtime configuration for ManulHeart.
+// Package config holds the engine-wide runtime configuration for ManulEngine (Go).
 // Each hunt execution gets a Config passed through the runtime stack.
 package config
 

@@ -1,6 +1,6 @@
 ---
 name: adding-dsl-commands
-description: Add a new verb/command to the ManulHeart .hunt DSL. Use when extending the parser with a new CommandType, wiring runtime dispatch, and writing parser + runtime tests. Covers the full multi-file change checklist.
+description: Add a new verb/command to the ManulEngine (Go) .hunt DSL. Use when extending the parser with a new CommandType, wiring runtime dispatch, and writing parser + runtime tests. Covers the full multi-file change checklist.
 ---
 
 # Adding a New DSL Command

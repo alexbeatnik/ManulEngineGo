@@ -1,14 +1,14 @@
-# ManulHeart — Debug & Explain Contract
+# ManulEngine (Go) — Debug & Explain Contract
 
 > **Machine-readable contract for interactive debugging, the pause/explain wire protocol, and explain-next scoring previews.**
 > Consumed by the VS Code extension debug driver, CI/CD diagnostics, and downstream tooling.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). The **stdin/stdout debug wire protocol** (pause marker, explain-next
 > marker, command tokens, 1-based step index) is **identical** across both
 > runtimes — it is the same protocol the VS Code extension speaks; see
 > `EXTENSION_ENGINE_CONTRACT.md` for the authoritative byte-level spec. The one
-> behavioral difference: ManulHeart's `explain-next` is a **read-only** scoring
+> behavioral difference: ManulEngine (Go)'s `explain-next` is a **read-only** scoring
 > preview (optionally with a step override); it does **not** support ManulEngine's
 > `!execute` What-If step *injection* (replacing and running the current action).
 
@@ -116,6 +116,6 @@
     "highlight": "debugHighlight(xpath) marks the resolved element (data-manul-debug-highlight) and scrolls it into view; clearDebugHighlight() removes it."
   },
 
-  "notInHeart": "ManulHeart's explain-next is read-only. It does NOT implement ManulEngine's What-If step *injection* (the `!execute <step>` REPL command / _what_if_execute_step that replaces and runs the current action). Use 'explain-next {step override}' for a scoring preview instead."
+  "notInHeart": "ManulEngine (Go)'s explain-next is read-only. It does NOT implement ManulEngine's What-If step *injection* (the `!execute <step>` REPL command / _what_if_execute_step that replaces and runs the current action). Use 'explain-next {step override}' for a scoring preview instead."
 }
 ```

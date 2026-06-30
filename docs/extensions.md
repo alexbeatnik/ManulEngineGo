@@ -1,8 +1,8 @@
 # Extensions — `CALL GO` & Custom Controls
 
-> *How to extend ManulHeart with native Go code.*
+> *How to extend ManulEngine (Go) with native Go code.*
 
-ManulHeart does not use Python decorators, JavaScript plugins, or dynamic module loading. Extensions are **compiled Go functions** registered at process startup via a strongly-typed API. Because they are native Go, they are:
+ManulEngine (Go) does not use Python decorators, JavaScript plugins, or dynamic module loading. Extensions are **compiled Go functions** registered at process startup via a strongly-typed API. Because they are native Go, they are:
 
 - **Type-safe** — the compiler checks your handler signatures
 - **Zero-overhead** — no interpreter, no serialization across language boundaries
@@ -41,7 +41,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
 )
 
 func init() {
@@ -111,8 +111,8 @@ package main
 import (
     "context"
 
-    "github.com/alexbeatnik/ManulHeart/pkg/browser"
-    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
 )
 
 func init() {
@@ -261,7 +261,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/alexbeatnik/ManulHeart/pkg/runtime"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
 )
 
 func init() {
@@ -332,4 +332,4 @@ STEP 1:
 | Return handling | Dict flattened into variables | `map[string]string` / `map[string]any` → `LevelRow` |
 | Aliases | `@script:` | `@script:` (same syntax, Go paths) |
 
-ManulHeart's extension model trades dynamic reloading for safety, speed, and parallelism. You compile your extensions into the binary once; they run at native speed forever.
+ManulEngine (Go)'s extension model trades dynamic reloading for safety, speed, and parallelism. You compile your extensions into the binary once; they run at native speed forever.

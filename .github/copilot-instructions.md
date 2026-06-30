@@ -1,4 +1,4 @@
-# Copilot Instructions — ManulHeart
+# Copilot Instructions — ManulEngine (Go)
 
 ## GLOBAL DOC SYNC RULE
 
@@ -13,14 +13,14 @@
 ## SOLO DEV ALPHA POSITIONING
 
 > **CRITICAL — Read this first.**
-> ManulHeart is a Go-based high-performance port of the ManulEngine interaction logic. It is currently in **active alpha**. 
+> ManulEngine (Go) is a Go-based high-performance port of the ManulEngine interaction logic. It is currently in **active alpha**. 
 > Never imply guarantees of stability, maturity, or production-readiness.
 > Bugs are expected, APIs may change, and the project is meant for technical exploration.
 
 ## CLI INSTALL + VERSION
 
 > **CRITICAL — Read this first.**
-> Current documented ManulHeart version is **v0.0.8** (one semver everywhere: the git tag, `manul --version` in `cmd/manul/main.go`, and the README all agree — bump them together).
+> Current documented ManulEngine (Go) version is **v0.0.8** (one semver everywhere: the git tag, `manul --version` in `cmd/manul/main.go`, and the README all agree — bump them together).
 > When documenting install or usage, prefer the Go binary as a PATH-visible system command named `manul`
 > (for example `~/.local/bin/manul` or `/usr/local/bin/manul`) so editor extensions can invoke it directly.
 > Do not document the repo-local binary as the only intended integration path when the request is about running from tools or extensions.
@@ -28,10 +28,10 @@
 ## AI Identity Directive
 
 **CRITICAL — Read this first.**
-ManulHeart is a **deterministic, DSL-first Web Automation Runtime** written in Go. It is NOT an AI-first tool.
+ManulEngine (Go) is a **deterministic, DSL-first Web Automation Runtime** written in Go. It is NOT an AI-first tool.
 
 1. **Prioritise deterministic actions.** Always default to the plain-English DSL (`CLICK`, `FILL`, `VERIFY`, `NAVIGATE`, `EXTRACT`, `SELECT`, `CHECK`, etc.) and the built-in `Scorer` heuristics.
-2. **Three-Pass Targeting Strategy.** ManulHeart uses a robust multi-pass resolution for restrictive interaction modes (checkboxes, radios, selects):
+2. **Three-Pass Targeting Strategy.** ManulEngine (Go) uses a robust multi-pass resolution for restrictive interaction modes (checkboxes, radios, selects):
    - **Pass 1 (Strict Match):** Finds elements of the requested type (e.g., input[type=checkbox]) matching the text directly.
    - **Pass 2 (Anchor Anchor):** Finds a non-interactive element (e.g., a <td> containing "7") to use as a proximity anchor.
    - **Pass 3 (Refined Target):** Searches for the desired interactive element near the identified anchor. If found within proximity limits, it targets that; otherwise, it targets the anchor and lets the action handler perform local refinement.
@@ -40,7 +40,7 @@ ManulHeart is a **deterministic, DSL-first Web Automation Runtime** written in G
 
 ## What is this project?
 
-ManulHeart is a high-performance Go port of the Manul interaction engine.
+ManulEngine (Go) is a high-performance Go port of the Manul interaction engine.
 It acts as a standalone interpreter for the `.hunt` DSL, driving Chromium via CDP.
 It resolves DOM elements using a weighted heuristic `Scorer` and a JavaScript `TreeWalker` snapshot probe that handles Shadow DOM boundaries.
 It is specifically designed to handle "Frontend Hell": zero-size inputs, hidden labels, custom div-based dropdowns, and paginated dynamic tables.
@@ -83,12 +83,12 @@ examples/                  Reference .hunt files (mega.hunt, sampler.hunt, loops
 
 ## Agent API (`pkg/agent`)
 
-For embedding ManulHeart in agent/LLM applications, `pkg/agent` is the stable,
+For embedding ManulEngine (Go) in agent/LLM applications, `pkg/agent` is the stable,
 compact facade — consumers get browser control "out of the box" without
 spawning Chrome, speaking CDP, or assembling the runtime themselves:
 
 - `agent.Connect(ctx, Options)` — one-call lifecycle: attaches if a Chrome is reachable at `Options.CDPURL`/`Port` (probes `/json/version`), else Launches & owns one. A consumer never probes the port, spawns Chrome, or waits for CDP itself.
-- `agent.Launch(ctx, Options)` — ManulHeart spawns and owns Chrome; `Close` reaps it.
+- `agent.Launch(ctx, Options)` — ManulEngine (Go) spawns and owns Chrome; `Close` reaps it.
 - `agent.Attach(ctx, cdpURL, urlSubstr, Options)` — connect to an existing Chrome (Close leaves it running).
 - `Session.PageState(ctx) → {Title, URL}` — lightweight snapshot (title via `EvalJS("document.title")`, URL via `CurrentURL`); errors per-field are soft (empty, not fatal).
 - `Session.Lookup(ctx, url, settle, extractJS)` — opens url in a background tab (via `CDPBrowser.OpenTarget` → `Target.createTarget`), waits `settle`, runs `extractJS` (or `BuildPageTextProbe` when empty), sanitizes, then reaps the tab (`CloseTarget`). The whole background-tab lifecycle lives in the engine; a consumer passes only its domain extractor. Needs a CDP endpoint (set by Launch/Attach/Connect).
@@ -375,7 +375,7 @@ Fields: `file` (absolute path), `name` (`filepath.Base`), `timestamp` (RFC3339 U
 
 ## Loop constructs (`0.0.1.1`+)
 
-ManulHeart's parser/runtime supports the same loop forms as Python ManulEngine. All bodies follow the standard 4-space indentation rule.
+ManulEngine (Go)'s parser/runtime supports the same loop forms as Python ManulEngine. All bodies follow the standard 4-space indentation rule.
 
 | Form | Syntax | Notes |
 |------|--------|-------|

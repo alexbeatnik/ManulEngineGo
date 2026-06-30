@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
 )
 
 // RunSummary is one row in an aggregate report — typically one parallel
@@ -61,7 +61,7 @@ func GenerateIndex(summaries []RunSummary, outDir string) (string, error) {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ManulHeart Run Report</title>
+<title>ManulEngine (Go) Run Report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -93,7 +93,7 @@ func GenerateIndex(summaries []RunSummary, outDir string) (string, error) {
 <body>
 `)
 
-	b.WriteString(fmt.Sprintf("<h1>ManulHeart Run Report <span class=\"badge %s\">%s</span></h1>\n",
+	b.WriteString(fmt.Sprintf("<h1>ManulEngine (Go) Run Report <span class=\"badge %s\">%s</span></h1>\n",
 		overallBadge, strings.ToUpper(overallBadge)))
 	b.WriteString(fmt.Sprintf("<div class=\"meta\">Generated %s</div>\n",
 		html.EscapeString(time.Now().Format(time.RFC3339))))

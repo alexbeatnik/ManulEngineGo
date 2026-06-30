@@ -1,4 +1,4 @@
-// Package record implements the `manul record <URL>` subcommand for ManulHeart.
+// Package record implements the `manul record <URL>` subcommand for ManulEngine (Go).
 //
 // It opens a URL in Chrome, injects a JS recorder, waits for the user to
 // finish interacting, then writes a .hunt file from the captured events.
@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
 )
 
 // RECORDER_JS is injected into the page to capture user interactions.

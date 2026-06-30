@@ -1,13 +1,13 @@
-# ManulHeart — DSL Contract
+# ManulEngine (Go) — DSL Contract
 
 > **Machine-readable contract for every `.hunt` DSL command recognised by the engine parser.**
-> Generated from the Go source code of ManulHeart.
+> Generated from the Go source code of ManulEngine (Go).
 > Consumed by Manul Studio and other downstream tooling.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). The `.hunt` grammar is **identical** across both runtimes; the only
 > differences here: `CALL GO` replaces `CALL PYTHON`, and Engine-only verbs
-> `FULL SCAN` / `SCAN PAGE` / `WAIT FOR SELECTOR` are omitted (ManulHeart exposes
+> `FULL SCAN` / `SCAN PAGE` / `WAIT FOR SELECTOR` are omitted (ManulEngine (Go) exposes
 > scanning via the `scan` CLI subcommand instead).
 
 ```json
@@ -283,7 +283,7 @@
       "uiText": "CALL GO package.function",
       "snippet": "CALL GO ${1:package}.${2:function}${3: with args: \"${4:arg}\"}${5: into {${6:variable}}}",
       "regex": "\\bCALL\\s+GO\\b",
-      "description": "Invokes a registered Go function inline (registered via the embedding API). Supports positional arguments ('with args:' sugar), optional 'into {var}' / 'to {var}' capture, and @script alias rewriting for CALL GO {alias}.func syntax. This is ManulHeart's runtime-specific call verb (mirrors ManulEngine's CALL GO).",
+      "description": "Invokes a registered Go function inline (registered via the embedding API). Supports positional arguments ('with args:' sugar), optional 'into {var}' / 'to {var}' capture, and @script alias rewriting for CALL GO {alias}.func syntax. This is ManulEngine (Go)'s runtime-specific call verb (mirrors ManulEngine's CALL GO).",
       "category": "go"
     },
     {
@@ -301,7 +301,7 @@
       "uiText": "PRINT \"message {variable}\"",
       "snippet": "PRINT \"${1:message}\"",
       "regex": "^\\s*(?:\\d+\\.\\s*)?PRINT\\b",
-      "description": "Logs a message to the run output, with {placeholder} variables substituted and a single layer of surrounding quotes stripped. No element resolution. Mirrors ManulHeart's PRINT (CmdPrint).",
+      "description": "Logs a message to the run output, with {placeholder} variables substituted and a single layer of surrounding quotes stripped. No element resolution. Mirrors ManulEngine (Go)'s PRINT (CmdPrint).",
       "category": "utility"
     },
     {
@@ -310,7 +310,7 @@
       "uiText": "SCREENSHOT [\"name\"]",
       "snippet": "SCREENSHOT \"${1:name}\"",
       "regex": "^\\s*(?:\\d+\\.\\s*)?SCREENSHOT\\b",
-      "description": "Captures a full-page PNG on demand into screenshots/<name>.png under the CWD (auto-named when no label is given). Mirrors ManulHeart's SCREENSHOT command.",
+      "description": "Captures a full-page PNG on demand into screenshots/<name>.png under the CWD (auto-named when no label is given). Mirrors ManulEngine (Go)'s SCREENSHOT command.",
       "category": "utility"
     },
     {

@@ -1,4 +1,4 @@
-// Package dsl implements the ManulHeart .hunt DSL parser.
+// Package dsl implements the ManulEngine (Go) .hunt DSL parser.
 //
 // A .hunt file is a sequence of natural-language-style automation commands
 // with optional @header directives, STEP blocks, and control-flow constructs.
@@ -673,7 +673,7 @@ func parseCommandLine(line string) Command {
 		cmd.URL = unquote(raw)
 
 	// ── OPEN APP ──────────────────────────────────────────────────────────────
-	// Desktop/Electron entry point. ManulEngine launches+attaches; in ManulHeart
+	// Desktop/Electron entry point. ManulEngine launches+attaches; in ManulEngine (Go)
 	// the app window is already attached at launch (--executable-path / --cdp),
 	// so OPEN APP is a readiness checkpoint on the current window.
 	case upper == "OPEN APP" || strings.HasPrefix(upper, "OPEN APP "):

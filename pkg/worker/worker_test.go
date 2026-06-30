@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/config"
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
-	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
-	"github.com/alexbeatnik/ManulHeart/pkg/utils"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/config"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/utils"
 )
 
 func mockHunt(t *testing.T, body string) *dsl.Hunt {

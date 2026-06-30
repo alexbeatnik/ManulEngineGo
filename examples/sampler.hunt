@@ -1,4 +1,4 @@
-@context: Exercises new ManulHeart features — EXTRACT, SET, SCROLL, PRESS, VERIFY SOFTLY, control flow
+@context: Exercises new ManulEngine (Go) features — EXTRACT, SET, SCROLL, PRESS, VERIFY SOFTLY, control flow
 @title: Feature Sampler
 
 @var: {username} = standard_user

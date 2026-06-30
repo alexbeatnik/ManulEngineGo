@@ -1,4 +1,4 @@
-// Package scan implements the `manul scan <URL>` subcommand for ManulHeart.
+// Package scan implements the `manul scan <URL>` subcommand for ManulEngine (Go).
 //
 // It opens a URL in Chrome, runs a DOM scanner JS, and writes a draft .hunt file.
 package scan
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
 )
 
 // SCAN_JS is the JavaScript payload executed in the browser to discover

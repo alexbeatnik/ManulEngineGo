@@ -1,6 +1,6 @@
 ---
 name: hunt-authoring
-description: Author or review ManulHeart .hunt DSL files. Use when the user asks to write, modify, or review a .hunt file, or when generating automation for a web flow that will be run by the `manul` CLI.
+description: Author or review ManulEngine (Go) .hunt DSL files. Use when the user asks to write, modify, or review a .hunt file, or when generating automation for a web flow that will be run by the `manul` CLI.
 ---
 
 # Authoring `.hunt` files

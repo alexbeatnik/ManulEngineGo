@@ -1,4 +1,4 @@
-module github.com/alexbeatnik/ManulHeart
+module github.com/alexbeatnik/ManulEngineGo
 
 go 1.26.2
 

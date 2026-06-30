@@ -1,9 +1,9 @@
-# ManulHeart — Scoring & Heuristics Contract
+# ManulEngine (Go) — Scoring & Heuristics Contract
 
 > **Machine-readable contract for the DOMScorer heuristic pipeline and element snapshot shape.**
 > Consumed by explain-mode UIs, custom scoring extensions, benchmark tooling, and downstream analytics.
 >
-> **Shared surface.** This is the Go (ManulHeart) copy of a contract shared with
+> **Shared surface.** This is the ManulEngine (Go) copy of a contract shared with
 > ManulEngine (Python). The *behavioral* surface — scoring channels, `WEIGHTS`,
 > `SCALE`, thresholds, and the element-snapshot field shape — is **identical**
 > across both runtimes (verified: same weights `cache 2.0 · semantics 0.60 ·

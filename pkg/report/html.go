@@ -1,4 +1,4 @@
-// Package report generates HTML execution reports for ManulHeart test runs.
+// Package report generates HTML execution reports for ManulEngine (Go) test runs.
 package report
 
 import (
@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
 )
 
 // reportSeq is a monotonic counter appended to every generated filename so
@@ -36,7 +36,7 @@ func GenerateHTML(result *explain.HuntResult, outDir string) (string, error) {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ManulHeart Report</title>
+<title>ManulEngine (Go) Report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -73,7 +73,7 @@ func GenerateHTML(result *explain.HuntResult, outDir string) (string, error) {
 	if !result.Success {
 		badge = "fail"
 	}
-	b.WriteString(fmt.Sprintf("<h1>ManulHeart Report <span class=\"badge %s\">%s</span></h1>\n",
+	b.WriteString(fmt.Sprintf("<h1>ManulEngine (Go) Report <span class=\"badge %s\">%s</span></h1>\n",
 		badge, strings.ToUpper(badge)))
 
 	if result.Title != "" {

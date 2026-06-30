@@ -1,4 +1,4 @@
-// Package cdp provides a Chrome DevTools Protocol client for ManulHeart.
+// Package cdp provides a Chrome DevTools Protocol client for ManulEngine (Go).
 //
 // This package implements the low-level WebSocket messenger and the
 // command-level CDP calls (Navigate, Evaluate, Click, etc.) used by
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/core"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/core"
 )
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -796,7 +796,7 @@ func GetCurrentURL(ctx context.Context, c *Conn) (string, error) {
 	return "", fmt.Errorf("unexpected evaluation result for URL: %v", val)
 }
 
-// WaitForLoad is available but ManulHeart prefers JS-polling WaitForLoad
+// WaitForLoad is available but ManulEngine (Go) prefers JS-polling WaitForLoad
 // in cdp_backend.go to avoid race conditions on cached pages.
 func WaitForLoad(ctx context.Context, c *Conn) error {
 	return nil // Handled in cdp_backend.go

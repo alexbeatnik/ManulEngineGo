@@ -1,4 +1,4 @@
-# Getting Started with ManulHeart
+# Getting Started with ManulEngine (Go)
 
 ## Prerequisites
 
@@ -11,8 +11,8 @@
 ## 1. Build
 
 ```bash
-git clone https://github.com/alexbeatnik/ManulHeart.git
-cd ManulHeart
+git clone https://github.com/alexbeatnik/ManulEngineGo.git
+cd ManulEngine (Go)
 go build -o manul ./cmd/manul
 ```
 
@@ -81,7 +81,7 @@ manul tests/my_flow.hunt
 Expected output:
 ```
 Launching Chrome (port 9222, profile /tmp/manulheart-chrome)…
-ManulHeart — tests/my_flow.hunt
+ManulEngine (Go) — tests/my_flow.hunt
 Title: Demo Login
 Commands: 6
 CDP: http://127.0.0.1:9222
@@ -151,7 +151,7 @@ echo 'STEP 1: Open page
     NAVIGATE to "https://example.com"' | manul - --headless
 ```
 
-`@import:` paths resolve against the **current working directory**. On failure, ManulHeart still emits a partial `*HuntResult` with per-step errors — useful for editor integrations and CI pipelines that need more detail than `exit 1`.
+`@import:` paths resolve against the **current working directory**. On failure, ManulEngine (Go) still emits a partial `*HuntResult` with per-step errors — useful for editor integrations and CI pipelines that need more detail than `exit 1`.
 
 ---
 

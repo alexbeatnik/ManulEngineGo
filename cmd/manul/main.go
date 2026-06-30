@@ -1,4 +1,4 @@
-// ManulHeart driver — CLI entry point.
+// ManulEngine (Go) driver — CLI entry point.
 //
 // Usage:
 //
@@ -33,26 +33,28 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/agent"
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
-	"github.com/alexbeatnik/ManulHeart/pkg/config"
-	"github.com/alexbeatnik/ManulHeart/pkg/daemon"
-	"github.com/alexbeatnik/ManulHeart/pkg/data"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
-	"github.com/alexbeatnik/ManulHeart/pkg/pages"
-	"github.com/alexbeatnik/ManulHeart/pkg/record"
-	"github.com/alexbeatnik/ManulHeart/pkg/report"
-	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
-	"github.com/alexbeatnik/ManulHeart/pkg/scan"
-	"github.com/alexbeatnik/ManulHeart/pkg/utils"
-	"github.com/alexbeatnik/ManulHeart/pkg/worker"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/agent"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/config"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/daemon"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/data"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/pages"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/record"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/report"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/scan"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/utils"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/worker"
 )
 
-// version is the single source of truth for the engine version. It tracks the
-// git module tag (semver vX.Y.Z) so `manul --version`, the README, and
-// `go get ...@<tag>` all agree. Bump this together with the tag.
-const version = "v0.0.10"
+// version is the single source of truth for the engine version. Reported by
+// `manul --version` and emitted in the agent schema, so it is kept WITHOUT a
+// `v` prefix to match the contracts (contracts/*.md `"version": "0.1.0"`). The
+// git module tag adds the prefix Go requires (`go get ...@v0.1.0`). Bump this
+// together with the tag.
+const version = "0.1.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -498,7 +500,7 @@ func runSequential(ctx context.Context, cfg config.Config, hunts []*dsl.Hunt, op
 				strings.Repeat("=", 60), filename, strings.Repeat("=", 60))
 		}
 
-		logger.Info("ManulHeart — %s", hunt.SourcePath)
+		logger.Info("ManulEngine (Go) — %s", hunt.SourcePath)
 		if hunt.Title != "" {
 			logger.Info("Title: %s", hunt.Title)
 		}

@@ -1,11 +1,11 @@
 ---
 name: cdp-browser-backend
-description: Add or modify low-level browser capabilities in ManulHeart. Use when implementing a new Page interface method, touching Chrome lifecycle, CDP commands, input dispatch, or JS evaluation. Covers the interface-to-backend wiring pattern.
+description: Add or modify low-level browser capabilities in ManulEngine (Go). Use when implementing a new Page interface method, touching Chrome lifecycle, CDP commands, input dispatch, or JS evaluation. Covers the interface-to-backend wiring pattern.
 ---
 
 # CDP Browser Backend
 
-ManulHeart's browser abstraction has two layers:
+ManulEngine (Go)'s browser abstraction has two layers:
 
 1. **`pkg/browser/browser.go`** — Abstract `Page` / `Browser` interfaces. Runtime targets these.
 2. **`pkg/browser/cdp_backend.go`** + **`pkg/cdp/cdp.go`** — CDP implementation. CDP is the only backend today.

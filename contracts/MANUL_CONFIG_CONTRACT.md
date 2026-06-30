@@ -1,9 +1,9 @@
-# ManulHeart — Configuration Contract
+# ManulEngine (Go) — Configuration Contract
 
-> **Machine-readable contract for the ManulHeart configuration surface.**
+> **Machine-readable contract for the ManulEngine (Go) configuration surface.**
 > Consumed by VS Code extension config panel, CI/CD integrations, and downstream tooling.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). The config keys, `MANUL_*` env vars, defaults, and precedence are
 > **identical** across both runtimes; only impl paths differ (`pkg/config` here
 > vs `manul_engine/config.py` in Engine). `CALL GO` replaces `CALL PYTHON`.
@@ -14,11 +14,11 @@
   "generatedFrom": "pkg/config :: _KEY_MAP, _CFG, get_threshold(), lookup_page_name(); pkg/runtime :: ScopedVariables; pkg/config :: envBool()",
 
   "configFile": {
-    "filename": "ManulHeart_configuration.json",
+    "filename": "ManulEngine (Go)_configuration.json",
     "format": "JSON",
     "resolution": [
-      "CWD (./ManulHeart_configuration.json)",
-      "Package root fallback (ManulHeart/ directory)"
+      "CWD (./ManulEngine (Go)_configuration.json)",
+      "Package root fallback (ManulEngine (Go)/ directory)"
     ],
     "vscodeOverride": "manulEngine.configFile (VS Code extension setting via getConfigFileName())"
   },
@@ -86,7 +86,7 @@
       "envVar": "MANUL_CDP_ENDPOINT",
       "type": "string | null",
       "default": null,
-      "description": "Attach to an already-running browser at this CDP HTTP endpoint (e.g. http://127.0.0.1:9222) instead of launching a new Chrome. Mirrors ManulHeart's --cdp. When set, the engine connects via CDPBrowser.connect_over_cdp and drives the first existing page.",
+      "description": "Attach to an already-running browser at this CDP HTTP endpoint (e.g. http://127.0.0.1:9222) instead of launching a new Chrome. Mirrors ManulEngine (Go)'s --cdp. When set, the engine connects via CDPBrowser.connect_over_cdp and drives the first existing page.",
       "cliFlag": "--cdp"
     },
     {

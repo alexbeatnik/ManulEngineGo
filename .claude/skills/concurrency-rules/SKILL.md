@@ -1,9 +1,9 @@
 ---
 name: concurrency-rules
-description: Enforce ManulHeart's concurrency contract when editing runtime/, cdp/, worker/, or anything that spawns goroutines. Use when adding shared state, introducing a goroutine, modifying the Worker/Pool API, or touching CDP transport internals.
+description: Enforce ManulEngine (Go)'s concurrency contract when editing runtime/, cdp/, worker/, or anything that spawns goroutines. Use when adding shared state, introducing a goroutine, modifying the Worker/Pool API, or touching CDP transport internals.
 ---
 
-# ManulHeart concurrency contract
+# ManulEngine (Go) concurrency contract
 
 Established in `0.0.0.2`, extended in `0.0.0.3` with `RunHuntsInParallel`
 and per-worker log prefixes, extended in `0.0.0.5` with the configuration

@@ -13,7 +13,7 @@ package synthetic
 import (
 	"testing"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
 )
 
 func travelDOM() []dom.ElementSnapshot {

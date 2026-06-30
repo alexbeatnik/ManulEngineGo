@@ -14,10 +14,10 @@ package synthetic
 // ─────────────────────────────────────────────────────────────────────────────
 
 import (
-	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/scorer"
 	"testing"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
 )
 
 // ── Test 1: data-qa exact match produces high score ──────────────────────────

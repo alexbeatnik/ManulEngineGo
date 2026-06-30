@@ -1,4 +1,4 @@
-// Package heuristics provides the in-page JavaScript probes that ManulHeart
+// Package heuristics provides the in-page JavaScript probes that ManulEngine (Go)
 // injects into the browser to collect normalized candidate data.
 //
 // Probes are first-class components of the engine targeting pipeline.
@@ -15,7 +15,7 @@ import (
 
 	_ "embed"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
 )
 
 // snapshotProbeJS is the primary DOM snapshot probe.

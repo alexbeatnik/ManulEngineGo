@@ -1,11 +1,11 @@
 ---
 name: configuration-system
-description: Add or modify runtime configuration fields in ManulHeart. Use when introducing a new tunable engine parameter, wiring CLI flags, or env-var overrides. Covers the 3-layer priority chain and pointer-based JSON overlay.
+description: Add or modify runtime configuration fields in ManulEngine (Go). Use when introducing a new tunable engine parameter, wiring CLI flags, or env-var overrides. Covers the 3-layer priority chain and pointer-based JSON overlay.
 ---
 
 # Configuration System
 
-ManulHeart's configuration is resolved from four sources in **strict priority order**:
+ManulEngine (Go)'s configuration is resolved from four sources in **strict priority order**:
 
 ```
 CLI Flags  >  MANUL_* env vars  >  manul_engine_configuration.json  >  config.Default()

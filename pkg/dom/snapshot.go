@@ -1,4 +1,4 @@
-// Package dom provides normalized DOM element modeling for ManulHeart.
+// Package dom provides normalized DOM element modeling for ManulEngine (Go).
 //
 // ElementSnapshot is the canonical in-memory representation of a single DOM
 // element as returned by the in-page JS probe. All engine-side logic

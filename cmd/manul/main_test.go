@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
-	"github.com/alexbeatnik/ManulHeart/pkg/config"
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
-	"github.com/alexbeatnik/ManulHeart/pkg/runtime"
-	"github.com/alexbeatnik/ManulHeart/pkg/utils"
-	"github.com/alexbeatnik/ManulHeart/pkg/worker"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/config"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/utils"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/worker"
 )
 
 // TestCustomControlAndCallGo demonstrates the full SDET workflow:
@@ -45,7 +45,7 @@ func TestCustomControlAndCallGo(t *testing.T) {
 	// ── 2. Register CALL GO helper ──────────────────────────────────────────
 	// A helper that simulates a DB setup call and returns a map.
 	// Python manul-engine flattens dict returns into shared variables;
-	// ManulHeart does the same for map[string]string / map[string]any.
+	// ManulEngine (Go) does the same for map[string]string / map[string]any.
 	err = runtime.RegisterGoCall("db.setup",
 		func(ctx context.Context, inv runtime.GoCallInvocation) (any, error) {
 			return map[string]string{

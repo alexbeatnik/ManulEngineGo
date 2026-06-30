@@ -1,4 +1,4 @@
-@context: Example login flow demonstrating ManulHeart DSL execution
+@context: Example login flow demonstrating ManulEngine (Go) DSL execution
 @title: Login Flow Example
 
 STEP 1: Navigate to the application

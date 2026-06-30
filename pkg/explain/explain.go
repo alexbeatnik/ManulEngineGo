@@ -1,4 +1,4 @@
-// Package explain provides structured explainability output for ManulHeart execution.
+// Package explain provides structured explainability output for ManulEngine (Go) execution.
 //
 // Every DSL command execution produces an ExecutionResult which records the full
 // targeting decision chain: what was discovered, how it was scored, why the

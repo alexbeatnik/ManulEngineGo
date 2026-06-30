@@ -1,6 +1,6 @@
 # Loops & Page Objects
 
-> ManulHeart now supports the same loop constructs and page-name registry as Python ManulEngine.
+> ManulEngine (Go) now supports the same loop constructs and page-name registry as Python ManulEngine.
 
 ## Loops
 
@@ -53,7 +53,7 @@ REPEAT 2 TIMES:
 
 ## Page Objects (pages/ directory)
 
-ManulHeart uses a `pages/` directory next to your hunt files to map URLs to human-readable page names.
+ManulEngine (Go) uses a `pages/` directory next to your hunt files to map URLs to human-readable page names.
 
 ### Fragment format
 
@@ -113,7 +113,7 @@ The page label is resolved via `document.title` first, then the `pages/` registr
 
 ### Comparison with Python ManulEngine
 
-| Feature | Python ManulEngine | Go ManulHeart |
+| Feature | Python ManulEngine | Go ManulEngine (Go) |
 |---------|-------------------|---------------|
 | Loop types | REPEAT, FOR EACH, WHILE | REPEAT, FOR EACH, WHILE |
 | Max WHILE iterations | `MAX_LOOP_ITERATIONS = 100` | hard limit = 100 |

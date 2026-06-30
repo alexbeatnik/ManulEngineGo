@@ -1,9 +1,9 @@
-# ManulHeart — Reporting Contract
+# ManulEngine (Go) — Reporting Contract
 
-> **Machine-readable contract for the ManulHeart reporting and result pipeline.**
+> **Machine-readable contract for the ManulEngine (Go) reporting and result pipeline.**
 > Consumed by HTML report generator, VS Code extension Test Explorer, CI/CD integrations, and downstream analytics.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). The result model (`StepResult`/`BlockResult`/`MissionResult`/`RunSummary`)
 > and especially the cross-consumed **`run_history.json` record** (`{file, name,
 > timestamp, status, duration_ms}`) are **byte-shape identical** across both

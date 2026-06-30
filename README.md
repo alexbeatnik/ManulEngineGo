@@ -1,10 +1,10 @@
-# ManulHeart
+# ManulEngine (Go)
 
 > **Deterministic Web Automation Runtime in Go**
 
 [![Alpha](https://img.shields.io/badge/status-alpha-orange)]() [![Go](https://img.shields.io/badge/go-%3E%3D1.26-blue)]() [![License](https://img.shields.io/badge/license-Apache%202.0-green)]()
 
-ManulHeart executes `.hunt` files using plain-English commands, DOM intelligence, heuristic element resolution, and structured explainability. It connects to system-installed Chrome via the **Chrome DevTools Protocol (CDP)** using pure Go WebSockets.
+ManulEngine (Go) executes `.hunt` files using plain-English commands, DOM intelligence, heuristic element resolution, and structured explainability. It connects to system-installed Chrome via the **Chrome DevTools Protocol (CDP)** using pure Go WebSockets.
 
 **No Playwright. No Node.js. No CSS/XPath selectors as a public API. No LLM in the loop.**
 
@@ -14,7 +14,7 @@ Single dependency: `gorilla/websocket`. Pure Go. Single static binary. True goro
 
 ## 📖 Documentation
 
-- **[Overview](docs/overview.md)** — Why ManulHeart exists and how it differs from Playwright/Node.js stacks
+- **[Overview](docs/overview.md)** — Why ManulEngine (Go) exists and how it differs from Playwright/Node.js stacks
 - **[Getting Started](docs/getting-started.md)** — Build, install, and run your first hunt
 - **[DSL Syntax](docs/dsl-syntax.md)** — Complete `.hunt` language reference
 - **[DSL for LLMs](docs/dsl-for-llms.md)** — Compact cheat-sheet + agent JSON shapes (`manul schema` is the machine-readable mirror)
@@ -170,7 +170,7 @@ echo 'STEP 1. Open the page
     NAVIGATE to "https://example.com"' | manul - --headless
 ```
 
-When `target` is `-`, ManulHeart parses stdin as a single hunt (source path `<stdin>`), resolves `@import:` relative to the current working directory, and emits a partial `*HuntResult` even if a step fails so downstream tools (e.g. the OS-Manul dispatcher) can read per-step errors instead of being limited to `exit 1`.
+When `target` is `-`, ManulEngine (Go) parses stdin as a single hunt (source path `<stdin>`), resolves `@import:` relative to the current working directory, and emits a partial `*HuntResult` even if a step fails so downstream tools (e.g. the OS-Manul dispatcher) can read per-step errors instead of being limited to `exit 1`.
 
 ### 4. Scan a page to generate a draft hunt
 
@@ -196,11 +196,11 @@ The `--full` mode mirrors ManulEngine's `FULL_SCAN_JS` — it traverses the enti
 
 ### Zero Dependencies (Pure CDP)
 
-ManulHeart speaks to Chrome directly over a WebSocket. There is no Playwright, no Selenium, no Node.js runtime, and no heavy dependency tree. The only external package is `gorilla/websocket` for the transport. Everything else — the CDP protocol, the heuristic probes, the scorer, the DSL parser — is pure Go standard library.
+ManulEngine (Go) speaks to Chrome directly over a WebSocket. There is no Playwright, no Selenium, no Node.js runtime, and no heavy dependency tree. The only external package is `gorilla/websocket` for the transport. Everything else — the CDP protocol, the heuristic probes, the scorer, the DSL parser — is pure Go standard library.
 
 ### True Concurrency (Goroutines)
 
-Because there is no GIL and no single-threaded browser driver process, ManulHeart can run dozens of hunts in parallel using native goroutines. The `pkg/worker` package provides a `WorkerPool` with per-worker Chrome isolation, `PortAllocator` for debug-port management, and race-detector-safe CDP transport. Each worker owns its own `Runtime`, `Page`, and `ChromeProcess`.
+Because there is no GIL and no single-threaded browser driver process, ManulEngine (Go) can run dozens of hunts in parallel using native goroutines. The `pkg/worker` package provides a `WorkerPool` with per-worker Chrome isolation, `PortAllocator` for debug-port management, and race-detector-safe CDP transport. Each worker owns its own `Runtime`, `Page`, and `ChromeProcess`.
 
 ### Determinism
 
@@ -257,7 +257,7 @@ The same `.hunt` file against the same page produces the same resolution path ev
 
 ### Environment Variables
 
-ManulHeart respects `MANUL_*` prefix environment variables (CLI flags always take precedence):
+ManulEngine (Go) respects `MANUL_*` prefix environment variables (CLI flags always take precedence):
 
 | Variable | Type | Description |
 |----------|------|-------------|
@@ -308,11 +308,11 @@ See [docs/overview.md](docs/overview.md) for the deep-dive architecture walkthro
 ## Embedding (Agent API)
 
 To drive a browser from a Go program — an assistant, an agent, a custom tool —
-embed `pkg/agent`. ManulHeart owns the entire browser lifecycle; the consumer
+embed `pkg/agent`. ManulEngine (Go) owns the entire browser lifecycle; the consumer
 just calls a small, compact API and never touches CDP or the runtime directly:
 
 ```go
-import "github.com/alexbeatnik/ManulHeart/pkg/agent"
+import "github.com/alexbeatnik/ManulEngineGo/pkg/agent"
 
 sess, err := agent.Connect(ctx, agent.Options{Port: 9222}) // attach if Chrome is up, else launch & own it
 // or: agent.Launch(ctx, agent.Options{Headless: true})    // always spawn & own Chrome
@@ -371,10 +371,10 @@ The `manul` CLI runs single-threaded by default. For true parallelism, embed the
 ```go
 import (
     "context"
-    "github.com/alexbeatnik/ManulHeart/pkg/config"
-    "github.com/alexbeatnik/ManulHeart/pkg/dsl"
-    "github.com/alexbeatnik/ManulHeart/pkg/report"
-    "github.com/alexbeatnik/ManulHeart/pkg/worker"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/config"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/report"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/worker"
 )
 
 func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
@@ -403,7 +403,7 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - [**Concurrency Rules**](.claude/skills/concurrency-rules/SKILL.md)
 - [**Adding DSL Commands**](.claude/skills/adding-dsl-commands/SKILL.md)
 - [**Go Calls & Extensions**](.claude/skills/extensions-and-go-calls/SKILL.md)
-- [**Testing ManulHeart**](.claude/skills/testing-manulheart/SKILL.md)
+- [**Testing ManulEngine (Go)**](.claude/skills/testing-manulheart/SKILL.md)
 - [**Hunt Authoring**](.claude/skills/hunt-authoring/SKILL.md)
 
 ---
@@ -427,11 +427,11 @@ func runSuite(ctx context.Context, hunts []*dsl.Hunt) error {
 - Strongly-typed extension API (`CALL GO`, `RegisterCustomControl`)
 - Race-detector-safe CDP transport and concurrent handler registries
 
-**Version:** `v0.0.10` — one semver scheme everywhere: the git module tag, `manul --version`, and `go get github.com/alexbeatnik/ManulHeart@v0.0.10` all agree.
+**Version:** `0.1.0` — `manul --version` and the contracts report `0.1.0` (no prefix); the git module tag carries the `v` prefix Go requires: `go get github.com/alexbeatnik/ManulEngineGo@v0.1.0`.
 
 **Recommended install target:** expose the binary as a PATH command named `manul` for editor extensions and automation tooling.
 
-> **VS Code Extension:** The [Manul Engine Extension](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) supports ManulHeart out of the box. Open a workspace containing `go.mod` and the extension auto-detects the Go runtime, surfaces `CALL GO` snippets, and validates `CALL GO` steps inside hook blocks.
+> **VS Code Extension:** The [Manul Engine Extension](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) supports ManulEngine (Go) out of the box. Open a workspace containing `go.mod` and the extension auto-detects the Go runtime, surfaces `CALL GO` snippets, and validates `CALL GO` steps inside hook blocks.
 
 ---
 

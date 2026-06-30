@@ -1,9 +1,9 @@
-# ManulHeart — CLI Contract
+# ManulEngine (Go) — CLI Contract
 
 > **Machine-readable contract for the `manul` CLI interface.**
 > Consumed by Manul Studio, VS Code extension, CI/CD integrations, and other downstream tooling.
 >
-> **Shared surface.** Go (ManulHeart) copy of a contract shared with ManulEngine
+> **Shared surface.** ManulEngine (Go) copy of a contract shared with ManulEngine
 > (Python). Subcommands, flags, env vars, and exit codes are **identical** across
 > both runtimes — except `pack`/`install` (`.huntlib`), which are Engine-only and
 > omitted here. Install via `go install`/`make` instead of `pip`; impl lives under
@@ -254,7 +254,7 @@
       "default": false,
       "configKey": null,
       "envVar": null,
-      "description": "Print the final RunSummary as indented JSON to stdout; human logs are routed to stderr. Base64 screenshots are stripped. Mirrors ManulHeart's --json.",
+      "description": "Print the final RunSummary as indented JSON to stdout; human logs are routed to stderr. Base64 screenshots are stripped. Mirrors ManulEngine (Go)'s --json.",
       "appliesTo": ["run"]
     },
     {
@@ -264,7 +264,7 @@
       "default": false,
       "configKey": null,
       "envVar": null,
-      "description": "Stream per-step JSON Lines (one object per step, type=step) followed by a final type=summary line to stdout; human logs are routed to stderr. Mirrors ManulHeart's --jsonl.",
+      "description": "Stream per-step JSON Lines (one object per step, type=step) followed by a final type=summary line to stdout; human logs are routed to stderr. Mirrors ManulEngine (Go)'s --jsonl.",
       "appliesTo": ["run"]
     },
     {
@@ -274,7 +274,7 @@
       "default": false,
       "configKey": "semantic_cache_enabled",
       "envVar": "MANUL_SEMANTIC_CACHE_ENABLED",
-      "description": "Disable the in-session semantic cache (learned_elements) for a fully cold, deterministic run. Mirrors ManulHeart's --disable-cache. Inverse of semantic_cache_enabled.",
+      "description": "Disable the in-session semantic cache (learned_elements) for a fully cold, deterministic run. Mirrors ManulEngine (Go)'s --disable-cache. Inverse of semantic_cache_enabled.",
       "appliesTo": ["run"]
     },
     {
@@ -294,7 +294,7 @@
       "default": null,
       "configKey": "cdp_endpoint",
       "envVar": "MANUL_CDP_ENDPOINT",
-      "description": "Attach to a running browser at this CDP HTTP endpoint (e.g. http://127.0.0.1:9222) instead of launching Chrome. Mirrors ManulHeart's --cdp.",
+      "description": "Attach to a running browser at this CDP HTTP endpoint (e.g. http://127.0.0.1:9222) instead of launching Chrome. Mirrors ManulEngine (Go)'s --cdp.",
       "appliesTo": ["run"]
     },
     {
@@ -304,7 +304,7 @@
       "default": null,
       "configKey": null,
       "envVar": "MANUL_CDP_TAB",
-      "description": "With --cdp, select the page whose URL contains the given substring (form: url=<substr>; the url= prefix is optional). Falls back to the first page. Mirrors ManulHeart's --target.",
+      "description": "With --cdp, select the page whose URL contains the given substring (form: url=<substr>; the url= prefix is optional). Falls back to the first page. Mirrors ManulEngine (Go)'s --target.",
       "appliesTo": ["run"]
     },
     {
@@ -327,11 +327,11 @@
   "configPriority": [
     "CLI flag (highest)",
     "Environment variable (MANUL_*)",
-    "ManulHeart_configuration.json",
+    "ManulEngine (Go)_configuration.json",
     "Built-in default (lowest)"
   ],
   "configFile": {
-    "filename": "ManulHeart_configuration.json",
+    "filename": "ManulEngine (Go)_configuration.json",
     "resolution": "CWD first, then executable directory fallback",
     "overrideSetting": "manulEngine.configFile (VS Code extension setting)",
     "keys": [
@@ -428,7 +428,7 @@
   ],
   "parallelModel": {
     "mechanism": "Subprocess per hunt file via asyncio.create_subprocess_exec",
-    "command": "[sys.executable, '-m', 'ManulHeart', '--workers', '1', ...flags, hunt_file]",
+    "command": "[sys.executable, '-m', 'ManulEngine (Go)', '--workers', '1', ...flags, hunt_file]",
     "concurrency": "asyncio.Semaphore(workers)",
     "timeout": "600s default (configurable via MANUL_WORKER_TIMEOUT env var)",
     "stdout": "Captured per worker, printed in submission order after all complete",

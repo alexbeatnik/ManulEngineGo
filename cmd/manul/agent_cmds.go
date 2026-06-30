@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/agent"
-	"github.com/alexbeatnik/ManulHeart/pkg/scan"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/agent"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/scan"
 )
 
 // scanElement is the LLM-facing projection of a scanned element: just the

@@ -1,11 +1,11 @@
 ---
 name: scoring-heuristics
-description: Add, tune, or debug ManulHeart's element resolution scoring. Use when modifying pkg/scorer, adding a new signal to ElementSnapshot (pkg/dom), extending the JS probe (pkg/heuristics), or wiring a new score component into pkg/explain for debuggability.
+description: Add, tune, or debug ManulEngine (Go)'s element resolution scoring. Use when modifying pkg/scorer, adding a new signal to ElementSnapshot (pkg/dom), extending the JS probe (pkg/heuristics), or wiring a new score component into pkg/explain for debuggability.
 ---
 
 # Working on the Scorer
 
-ManulHeart resolves DSL targets to DOM elements by scoring every candidate
+ManulEngine (Go) resolves DSL targets to DOM elements by scoring every candidate
 on a `[0.0, 1.0]` scale across weighted channels, then ranking. The scorer
 is PURE and STATELESS — same inputs always produce the same output. No
 randomness, no LLM calls, no hidden caches.

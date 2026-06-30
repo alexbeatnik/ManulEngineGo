@@ -1,9 +1,9 @@
 ---
 name: testing-manulheart
-description: Run or write tests for ManulHeart the right way. Use when adding a new test, debugging a flaky test, updating CI, or when the user asks "are tests passing?". Covers race-detector expectations, mock patterns, and the synthetic scorer suite.
+description: Run or write tests for ManulEngine (Go) the right way. Use when adding a new test, debugging a flaky test, updating CI, or when the user asks "are tests passing?". Covers race-detector expectations, mock patterns, and the synthetic scorer suite.
 ---
 
-# Testing ManulHeart
+# Testing ManulEngine (Go)
 
 ## Default command
 

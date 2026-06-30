@@ -1,4 +1,4 @@
-// Package runtime implements the ManulHeart DSL execution engine.
+// Package runtime implements the ManulEngine (Go) DSL execution engine.
 package runtime
 
 import (
@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexbeatnik/ManulHeart/pkg/browser"
-	"github.com/alexbeatnik/ManulHeart/pkg/config"
-	"github.com/alexbeatnik/ManulHeart/pkg/core"
-	"github.com/alexbeatnik/ManulHeart/pkg/dom"
-	"github.com/alexbeatnik/ManulHeart/pkg/dsl"
-	"github.com/alexbeatnik/ManulHeart/pkg/explain"
-	"github.com/alexbeatnik/ManulHeart/pkg/heuristics"
-	"github.com/alexbeatnik/ManulHeart/pkg/pages"
-	"github.com/alexbeatnik/ManulHeart/pkg/scorer"
-	"github.com/alexbeatnik/ManulHeart/pkg/utils"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/config"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/core"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dom"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/dsl"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/explain"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/heuristics"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/pages"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/scorer"
+	"github.com/alexbeatnik/ManulEngineGo/pkg/utils"
 )
 
 func min(a, b int) int {
@@ -38,7 +38,7 @@ const (
 	ThresholdPass3Gap       = 0.04
 )
 
-// Runtime executes ManulHeart DSL hunts against a live browser page.
+// Runtime executes ManulEngine (Go) DSL hunts against a live browser page.
 //
 // CONCURRENCY CONTRACT: A Runtime instance is NOT safe for concurrent use.
 // Each goroutine executing hunts must own its own Runtime, Page, and

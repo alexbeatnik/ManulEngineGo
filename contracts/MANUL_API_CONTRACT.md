@@ -1,9 +1,9 @@
-# ManulHeart — Go Embedding API Contract
+# ManulEngine (Go) — Go Embedding API Contract
 
-> **Machine-readable contract for the `pkg/agent` Go embedding API — the programmatic way to drive ManulHeart from a Go application.**
+> **Machine-readable contract for the `pkg/agent` Go embedding API — the programmatic way to drive ManulEngine (Go) from a Go application.**
 > Consumed by Go programs embedding the engine, agent harnesses, and the `manul` agent subcommands (`map`/`read`/`run-step`), which are thin CLI wrappers over this API.
 >
-> **Runtime-specific surface.** This is the Go (ManulHeart) analog of ManulEngine's
+> **Runtime-specific surface.** This is the ManulEngine (Go) analog of ManulEngine's
 > Python `ManulSession` async context-manager API. The two are **not** wire- or
 > source-compatible (Go package vs Python class), but they expose the **same
 > capabilities** and the **same result shapes**: `StepOutcome`, `PageMap`, and the
@@ -15,10 +15,10 @@
 {
   "version": "0.1.0",
   "generatedFrom": "pkg/agent/agent.go :: Options, Session, Launch(), Attach(), (*Session).Close/Read/ReadText/Step/Run/Map, Value, Reason, Cand, StepOutcome, RunOutcome, MapBudget, MapElement, MapGroup, PageMap, TruncateText(), DefaultMaxPerGroup",
-  "importPath": "github.com/alexbeatnik/ManulHeart/pkg/agent",
+  "importPath": "github.com/alexbeatnik/ManulEngineGo/pkg/agent",
 
   "overview": {
-    "model": "A Session is a live, owned browser connection plus the targeting runtime. Create one with Launch (ManulHeart spawns Chrome) or Attach (connect to an already-running Chrome). Always Close it.",
+    "model": "A Session is a live, owned browser connection plus the targeting runtime. Create one with Launch (ManulEngine (Go) spawns Chrome) or Attach (connect to an already-running Chrome). Always Close it.",
     "lifecycleOwnership": "Launch owns the Chrome process (and any temp profile) — Close terminates it. Attach does NOT own Chrome — Close leaves it running.",
     "concurrency": "Every Session method is guarded by an internal mutex; a single Session drives a single page and serializes calls. Use one Session per page/goroutine."
   },
@@ -40,7 +40,7 @@
     {
       "name": "Launch",
       "signature": "Launch(ctx context.Context, opts Options) (*Session, error)",
-      "description": "Spawns a Chrome process owned by ManulHeart, attaches to its first page, and returns a ready Session. Close tears the process (and temp profile) down."
+      "description": "Spawns a Chrome process owned by ManulEngine (Go), attaches to its first page, and returns a ready Session. Close tears the process (and temp profile) down."
     },
     {
       "name": "Attach",
