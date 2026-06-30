@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="images/manul.png" alt="ManulEngine (Go) mascot" width="180" />
+</p>
+
 # ManulEngine (Go)
 
 > **Deterministic Web Automation Runtime in Go**
