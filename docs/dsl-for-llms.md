@@ -75,9 +75,13 @@ scorer — **never** CSS/XPath. Always quote labels: `Click the 'Login' button`.
 
 ```json
 { "url": "https://…",
-  "groups": [ { "name": "Page", "elements": [ { "label": "Login", "role": "button" } ],
+  "groups": [ { "name": "Page",
+                "elements": [ { "label": "Email", "role": "textbox", "editable": true },
+                              { "label": "Login", "role": "button" } ],
                 "truncated": 3 } ] }
 ```
+
+`editable` marks inputs an agent can `FILL` (omitted when false).
 
 Groups are ordered for an agent: `Page` first, then content landmarks
 (main / forms / results), then chrome (header / nav / footer). Bound the size
