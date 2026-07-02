@@ -375,7 +375,7 @@ Create `manul_engine_configuration.json` in the workspace root. All keys are opt
 ```json
 {
   "browser": "chromium",
-  "semantic_cache_enabled": true
+  "headless": false
 }
 ```
 
@@ -396,8 +396,9 @@ manul --headless --html-report examples/         # CI mode with reports
 | `headless` | `false` | Hide the browser window. |
 | `browser` | `"chromium"` | `chromium` (launch system Chrome) or `electron` (attach to a running Chrome/Electron over CDP). |
 | `browser_args` | `[]` | Extra browser launch flags. |
-| `semantic_cache_enabled` | `true` | In-session semantic cache (feeds the scorer, never bypasses it). |
-| `timeout` | `30s` | Default per-command timeout. |
+| `disable_cache` | `false` | Disable the in-session DOM snapshot cache (env: `MANUL_DISABLE_CACHE`, or the inverse `MANUL_SEMANTIC_CACHE_ENABLED`). |
+| `timeout` | `5000` | Action timeout, milliseconds. |
+| `nav_timeout` | `30000` | Navigation timeout, milliseconds. |
 | `workers` | `1` | Max parallel hunt files. |
 | `channel` | `null` | Chrome/Chromium binary to launch (`chrome`, `msedge`, `chromium`, …). |
 | `executable_path` | `null` | Explicit path to a Chrome/Chromium (or Electron) executable. |

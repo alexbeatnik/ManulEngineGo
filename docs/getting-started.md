@@ -80,7 +80,7 @@ manul tests/my_flow.hunt
 
 Expected output:
 ```
-Launching Chrome (port 9222, profile /tmp/manulheart-chrome)…
+Launching Chrome (port 9222, profile /tmp/manulengine-chrome)…
 ManulEngine (Go) — tests/my_flow.hunt
 Title: Demo Login
 Commands: 6

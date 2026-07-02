@@ -79,7 +79,7 @@ func LaunchChrome(ctx context.Context, opts ChromeOptions) (*ChromeProcess, erro
 
 	ownsDir := false
 	if opts.UserDataDir == "" {
-		dir, err := os.MkdirTemp("", "manulheart-chrome-*")
+		dir, err := os.MkdirTemp("", "manulengine-chrome-*")
 		if err != nil {
 			return nil, fmt.Errorf("create chrome temp dir: %w", err)
 		}

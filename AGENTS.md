@@ -273,7 +273,7 @@ Read the relevant skill file **before** making changes to related systems.
 | Concurrency, `pkg/worker`, `pkg/runtime`, `pkg/cdp`, any `go` routine | `.claude/skills/concurrency-rules/SKILL.md` |
 | `pkg/scorer`, `pkg/dom`, JS probes (`pkg/heuristics`) | `.claude/skills/scoring-heuristics/SKILL.md` |
 | Writing or reviewing `.hunt` files | `.claude/skills/hunt-authoring/SKILL.md` |
-| Writing or debugging tests | `.claude/skills/testing-manulheart/SKILL.md` |
+| Writing or debugging tests | `.claude/skills/testing-manulengine-go/SKILL.md` |
 | Adding/modifying DSL commands in `pkg/dsl` + `pkg/runtime` | `.claude/skills/adding-dsl-commands/SKILL.md` |
 | `RegisterCustomControl` / `RegisterGoCall` extension registries | `.claude/skills/extensions-and-go-calls/SKILL.md` |
 | `pkg/browser/`, `pkg/cdp/` — Page interface, Chrome lifecycle, CDP commands | `.claude/skills/cdp-browser-backend/SKILL.md` |
