@@ -14,11 +14,10 @@
   "generatedFrom": "pkg/config :: _KEY_MAP, _CFG, get_threshold(), lookup_page_name(); pkg/runtime :: ScopedVariables; pkg/config :: envBool()",
 
   "configFile": {
-    "filename": "ManulEngine (Go)_configuration.json",
+    "filename": "manul_engine_configuration.json",
     "format": "JSON",
     "resolution": [
-      "CWD (./ManulEngine (Go)_configuration.json)",
-      "Package root fallback (ManulEngine (Go)/ directory)"
+      "CWD (./manul_engine_configuration.json) — the only lookup location in the Go runtime"
     ],
     "vscodeOverride": "manulEngine.configFile (VS Code extension setting via getConfigFileName())"
   },

@@ -327,11 +327,11 @@
   "configPriority": [
     "CLI flag (highest)",
     "Environment variable (MANUL_*)",
-    "ManulEngine (Go)_configuration.json",
+    "manul_engine_configuration.json",
     "Built-in default (lowest)"
   ],
   "configFile": {
-    "filename": "ManulEngine (Go)_configuration.json",
+    "filename": "manul_engine_configuration.json",
     "resolution": "CWD first, then executable directory fallback",
     "overrideSetting": "manulEngine.configFile (VS Code extension setting)",
     "keys": [
