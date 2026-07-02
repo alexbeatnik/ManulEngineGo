@@ -685,30 +685,56 @@ func collectHuntFiles(target string) ([]string, error) {
 
 // ── run-step subcommand ───────────────────────────────────────────────────────
 
+// parseInterleaved parses a flag set over args where flags may appear before
+// or after positional arguments (Go's flag package stops at the first
+// non-flag; ManulEngine (Python) accepts both orders, so the CLIs must too).
+// Mirrors cmdRun's re-parse loop; returns the positionals in order.
+func parseInterleaved(fs *flag.FlagSet, args []string) ([]string, error) {
+	var positionals []string
+	remaining := args
+	for len(remaining) > 0 {
+		if err := fs.Parse(remaining); err != nil {
+			return nil, err
+		}
+		if fs.NArg() > 0 {
+			positionals = append(positionals, fs.Arg(0))
+			remaining = fs.Args()[1:]
+		} else {
+			remaining = nil
+		}
+	}
+	return positionals, nil
+}
+
 func cmdRunStep(args []string) error {
 	fs := flag.NewFlagSet("run-step", flag.ExitOnError)
 	cdpEndpoint := fs.String("cdp", "http://127.0.0.1:9222", "CDP endpoint URL")
 	verbose := fs.Bool("verbose", false, "enable verbose logging")
-	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
-	compact := fs.Bool("compact", false, "emit the compact agent StepOutcome (reason + top candidates, no scorer breakdown) as JSON")
+	jsonOut := fs.Bool("json", false, "print the full ExecutionResult as JSON instead of the compact StepOutcome")
+	_ = fs.Bool("compact", false, "emit the compact agent StepOutcome (default; flag accepted for symmetry)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: driver run-step '<command>' [flags]\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
+	positionals, err := parseInterleaved(fs, args)
+	if err != nil {
 		return err
 	}
 
-	step := fs.Arg(0)
+	var step string
+	if len(positionals) > 0 {
+		step = positionals[0]
+	}
 	if step == "" {
 		fs.Usage()
 		return fmt.Errorf("DSL command is required")
 	}
 
-	// --compact routes through pkg/agent so the CLI and embedded consumers
-	// share one code path and one result shape.
-	if *compact {
+	// Default output is the compact agent StepOutcome via pkg/agent, matching
+	// ManulEngine (Python) and the agent contract; --json opts into the full
+	// ExecutionResult below.
+	if !*jsonOut {
 		return runStepCompact(*cdpEndpoint, step)
 	}
 
@@ -720,13 +746,8 @@ func cmdRunStep(args []string) error {
 	if *verbose {
 		logLevel = utils.LogLevelDebug
 	}
-	// In -json mode, keep stdout clean for the payload.
-	var logger *utils.Logger
-	if *jsonOut {
-		logger = utils.NewLoggerTo(os.Stderr, nil).WithLevel(logLevel)
-	} else {
-		logger = utils.NewLogger(nil).WithLevel(logLevel)
-	}
+	// Keep stdout clean for the JSON payload; logs go to stderr.
+	logger := utils.NewLoggerTo(os.Stderr, nil).WithLevel(logLevel)
 
 	ctx := context.Background()
 
@@ -743,19 +764,10 @@ func cmdRunStep(args []string) error {
 		return err
 	}
 
-	if *jsonOut {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-		os.Stdout.Sync()
-	} else {
-		if result.Success {
-			logger.Info("✓ %s", step)
-		} else {
-			logger.Error("✗ %s → %s", step, result.Error)
-			return fmt.Errorf("step failed: %s", result.Error)
-		}
-	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(result)
+	os.Stdout.Sync()
 
 	return nil
 }
@@ -796,18 +808,22 @@ func cmdRead(args []string) error {
 	selector := fs.String("selector", "", "CSS selector for region text (uses ReadText instead of targeted Read)")
 	urlSubstr := fs.String("tab", "", "attach to the page whose URL contains this substring")
 	maxChars := fs.Int("max-chars", 0, "truncate --selector region text to this many characters (0 = no limit)")
-	jsonOut := fs.Bool("json", false, "print JSON result to stdout")
+	_ = fs.Bool("json", false, "emit JSON (default; flag accepted for symmetry)")
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: manul read '<target>' [flags]\n\n"+
 			"  Reads one value off an already-open page (no full scan).\n"+
 			"  With --selector, returns the sanitized text of that CSS region.\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
+	positionals, err := parseInterleaved(fs, args)
+	if err != nil {
 		return err
 	}
 
-	target := fs.Arg(0)
+	var target string
+	if len(positionals) > 0 {
+		target = positionals[0]
+	}
 	if target == "" && *selector == "" {
 		fs.Usage()
 		return fmt.Errorf("a target label or --selector is required")
@@ -820,32 +836,22 @@ func cmdRead(args []string) error {
 	}
 	defer sess.Close()
 
+	// Output is always JSON, matching ManulEngine (Python) and the agent
+	// contract — a driver pipes the payload without needing --json.
 	if *selector != "" {
 		text, terr := sess.ReadText(ctx, *selector)
 		if terr != nil {
 			return terr
 		}
 		text = agent.TruncateText(text, *maxChars)
-		if *jsonOut {
-			return emitJSON(map[string]any{"text": text, "selector": *selector})
-		}
-		fmt.Println(text)
-		return nil
+		return emitJSON(map[string]any{"text": text, "selector": *selector})
 	}
 
 	v, rerr := sess.Read(ctx, target)
 	if rerr != nil {
 		return rerr
 	}
-	if *jsonOut {
-		return emitJSON(map[string]any{"value": v.Text, "found": v.Found, "reason": string(v.Reason)})
-	}
-	if !v.Found {
-		// Distinguish "nothing there" from an error: empty stdout, exit 0.
-		return nil
-	}
-	fmt.Println(v.Text)
-	return nil
+	return emitJSON(map[string]any{"value": v.Text, "found": v.Found, "reason": string(v.Reason)})
 }
 
 // emitJSON writes v as indented JSON to stdout, keeping the payload clean.
@@ -909,10 +915,14 @@ func cmdDaemon(args []string) error {
 	browserType := fs.String("browser", "chromium", "browser engine (chromium; CDP-only — attach to other browsers via --cdp/--executable-path)")
 	screenshot := fs.String("screenshot", "on-fail", "screenshot mode: none, on-fail, always")
 	htmlReport := fs.Bool("html-report", false, "generate HTML report after each run")
-	if err := fs.Parse(args); err != nil {
-		return err
+	positionals, perr := parseInterleaved(fs, args)
+	if perr != nil {
+		return perr
 	}
-	dir := fs.Arg(0)
+	var dir string
+	if len(positionals) > 0 {
+		dir = positionals[0]
+	}
 	if dir == "" {
 		fs.Usage()
 		return fmt.Errorf("directory path is required")
@@ -948,10 +958,14 @@ func cmdRecord(args []string) error {
 	fs := flag.NewFlagSet("record", flag.ExitOnError)
 	output := fs.String("output", "tests/recorded_mission.hunt", "output file path")
 	headless := fs.Bool("headless", false, "run browser in headless mode")
-	if err := fs.Parse(args); err != nil {
+	positionals, err := parseInterleaved(fs, args)
+	if err != nil {
 		return err
 	}
-	url := fs.Arg(0)
+	var url string
+	if len(positionals) > 0 {
+		url = positionals[0]
+	}
 	if url == "" {
 		fs.Usage()
 		return fmt.Errorf("URL is required")
@@ -967,8 +981,9 @@ func cmdScan(args []string) error {
 	full := fs.Bool("full", false, "full-page scan: group elements by semantic region (form, nav, main, shadow…)")
 	cdpEndpoint := fs.String("cdp", "", "scan an already-loaded page via this CDP endpoint instead of launching Chrome (URL arg becomes optional)")
 	jsonOut := fs.Bool("json", false, "emit the grouped scan result as JSON on stdout instead of writing a .hunt draft")
-	if err := fs.Parse(args); err != nil {
-		return err
+	positionals, perr := parseInterleaved(fs, args)
+	if perr != nil {
+		return perr
 	}
 
 	ctx := context.Background()
@@ -1002,7 +1017,10 @@ func cmdScan(args []string) error {
 		return nil
 	}
 
-	url := fs.Arg(0)
+	var url string
+	if len(positionals) > 0 {
+		url = positionals[0]
+	}
 	if url == "" {
 		fs.Usage()
 		return fmt.Errorf("URL is required (or pass --cdp to scan an already-open page)")

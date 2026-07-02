@@ -179,7 +179,7 @@ func engineSchema() map[string]any {
 		"page_map": map[string]string{
 			"url":      "string — current page URL",
 			"groups":   "array of {name, elements[], truncated}",
-			"element":  "{label, role}",
+			"element":  "{label, role, editable?}",
 			"ordering": "Page first, then content landmarks, then chrome (header/nav/footer).",
 		},
 		"failure_reasons": []string{

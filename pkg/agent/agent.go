@@ -548,6 +548,9 @@ const DefaultMaxPerGroup = 8
 type MapElement struct {
 	Label string `json:"label"`
 	Role  string `json:"role"`
+	// Editable marks inputs an agent can FILL (omitted when false), matching
+	// ManulEngine (Python)'s map output shape.
+	Editable bool `json:"editable,omitempty"`
 }
 
 // MapGroup is a landmark region and its (budgeted) elements.
@@ -617,7 +620,7 @@ func (s *Session) Map(ctx context.Context, budget MapBudget) (PageMap, error) {
 			if role == "" {
 				role = e.Tag
 			}
-			g.Elements = append(g.Elements, MapElement{Label: strings.TrimSpace(e.Label), Role: role})
+			g.Elements = append(g.Elements, MapElement{Label: strings.TrimSpace(e.Label), Role: role, Editable: e.Editable})
 		}
 		pm.Groups = append(pm.Groups, g)
 	}
