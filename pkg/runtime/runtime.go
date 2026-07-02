@@ -1122,6 +1122,69 @@ func (rt *Runtime) executeCommand(ctx context.Context, cmd dsl.Command) (res exp
 		}
 
 	case dsl.CmdVerifyField:
+		// Attribute form: VERIFY '<label>' has value|text|placeholder "<expected>"
+		// (parser sets Target/VerifyFieldKind/Value; the state form below uses
+		// VerifyText/VerifyState instead).
+		if cmd.VerifyFieldKind != "" {
+			res.TargetRequired = true
+			target := rt.resolveVariables(cmd.Target)
+			expected := rt.resolveVariables(cmd.Value)
+			res.TargetQuery = target
+			verifyDeadline := time.Now().Add(rt.cfg.DefaultTimeout)
+			if deadline, ok := ctx.Deadline(); ok && deadline.Before(verifyDeadline) {
+				verifyDeadline = deadline
+			}
+			var ranked []scorer.RankedCandidate
+			actual := ""
+			matched := false
+			for {
+				rt.invalidateSnapshot()
+				elements, errSnapshot := rt.loadSnapshot(ctx)
+				if errSnapshot != nil {
+					err = errSnapshot
+					break
+				}
+				res.CandidatesConsidered = len(elements)
+				ranked = scorer.Rank(target, cmd.TypeHint, string(dsl.ModeNone), elements, 5, nil)
+				if len(ranked) > 0 {
+					winner := ranked[0].Element
+					switch cmd.VerifyFieldKind {
+					case "value":
+						actual = winner.Value
+					case "placeholder":
+						actual = winner.Placeholder
+					default: // "text"
+						actual = strings.TrimSpace(winner.VisibleText)
+					}
+					if actual == expected {
+						matched = true
+						break
+					}
+				}
+				if time.Now().After(verifyDeadline) {
+					break
+				}
+				if waitErr := rt.page.Wait(ctx, 200*time.Millisecond); waitErr != nil {
+					err = waitErr
+					break
+				}
+			}
+			if len(ranked) > 0 {
+				appendRankedCandidates(&res, ranked, 1)
+				res.WinnerXPath = ranked[0].Element.XPath
+				res.WinnerScore = ranked[0].Explain.Score.Total
+				res.ActionValue = actual
+			}
+			if err == nil && !matched {
+				if len(ranked) == 0 {
+					err = fmt.Errorf("verification failed: target field '%s' not found", target)
+				} else {
+					err = fmt.Errorf("verification failed: '%s' has %s %q, expected %q", target, cmd.VerifyFieldKind, actual, expected)
+				}
+			}
+			break
+		}
+
 		// Full element resolution for state-specific verification.
 		res.TargetRequired = true
 		target := rt.resolveVariables(cmd.VerifyText)
