@@ -4,10 +4,10 @@
 
 # ManulEngine (Go)
 
-[![Status: Alpha](https://img.shields.io/badge/status-alpha-d97706)](#project-status)
-[![Go](https://img.shields.io/badge/go-%3E%3D1.26-blue)](https://go.dev/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
-[![Manul Engine Extension](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-engine?label=VS%20Code%20Extension&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine)
+> **This project is no longer maintained.** It has been replaced by
+> [Manul Browser](https://github.com/alexbeatnik/manul-browser), where this engine lives on
+> as `core/`, with Python and Node bindings beside it.
+> There will be no further fixes or releases here.
 
 **A deterministic automation runtime for both humans and LLM agents — the Go implementation of ManulEngine.** Write (or generate) `.hunt` files in plain English; ManulEngine resolves every element with deterministic DOM heuristics and drives Chrome directly over the Chrome DevTools Protocol (CDP) — no Playwright, no selectors, no cloud APIs, no AI required.
 
